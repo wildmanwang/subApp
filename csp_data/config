@@ -1,0 +1,28 @@
+[handle]
+host = 192.168.10.159
+port = 3309
+user = qingflow
+password = 0^ag2q5YM7kHgsWDLH*umbllagh*2O74
+database = spider
+
+[CSP_srv]
+host = 192.168.10.159
+port = 3308
+user = wanglinqun
+password = sz@mgf#$%11125.115900
+database = unlocker
+
+[JD_srv]
+host = 192.168.10.159
+port = 3309
+user = qingflow
+password = 0^ag2q5YM7kHgsWDLH*umbllagh*2O74
+database = renren_fast
+cookie = _ati=5370730286794; acw_tc=b65cfd3116468820728226293e1e80b9dc06c82bc01b10b0b0591cbe17062e; JSESSIONID=DFD04DCE3C035294545173D94FBD7094; 3AB9D23F7A4B3C9B=N5U4FUMVIXC74VXTTFD2BFBYDL5N25RNM7F7EQRAKW2B5HKQKLX4NB3LCWWKEHEUR56AMLN7EGUKDNIWARQLH6HDXM; _jdeid=N5U4FUMVIXC74VXTTFD2BFBYDL5N25RNM7F7EQRAKW2B5HKQKLX4NB3LCWWKEHEUR56AMLN7EGUKDNIWARQLH6HDXM
+
+[business]
+tmpfilepath = d:\
+asobillinterval = 60
+jdbillinterval = 10
+jdbillbreakpoint = 20220324222000
+

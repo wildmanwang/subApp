@@ -1,0 +1,13 @@
+.idea
+__pycache__
+build
+venv
+srvPackage
+bak
+
+*.rar
+*.spec
+*.log
+*.dat
+*.bak
+*.sql
