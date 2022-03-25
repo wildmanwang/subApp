@@ -1,0 +1,9 @@
+[finance_srv]
+host = local
+port = 3306
+user = root
+password = 0Wangle?
+database = financems
+
+[business]
+tmpfilepath = d:\
