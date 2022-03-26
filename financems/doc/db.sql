@@ -1,8 +1,8 @@
 -- 账户
 create table ac_account(
     id              int auto_increment primary key,
-    name            varchar(100) not null unique        comment '账户名称',
-    simple_name     varchar(20) not null unique         comment '账户简称',
+    name            varchar(100) not null               comment '账户名称',
+    simple_name     varchar(20) not null                comment '账户简称',
     entity_type     tinyint not null                    comment '实体类型 1:平台 2:服务商 3:商家 4:师傅',
     entity_id       int not null                        comment '实体ID',
     ac_type         tinyint not null                    comment '记账类型 1:收款 2:预收 3:信用',
@@ -77,3 +77,15 @@ create table ac_pay_type(
     created_time    timestamp null default current_timestamp,
     updated_time    timestamp null on update current_timestamp
 ) comment = '付款方式';
+
+-- 数据字典
+create table base_dict(
+    id              int auto_increment primary key,
+    bd_type         varchar(50) not null                comment '字典类型',
+    bd_label        varchar(50) not null                comment '字典标签',
+    bd_value        int not null                        comment '字典值',
+    bd_remark       varchar(50)                         comment '备注',
+    created_time    timestamp null default current_timestamp,
+    updated_time    timestamp null on update current_timestamp,
+    index idx_bdtype (bd_type)
+) comment = '数据字典';

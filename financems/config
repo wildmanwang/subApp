@@ -1,8 +1,8 @@
 [finance_srv]
-host = local
+host = 127.0.0.1
 port = 3306
 user = root
-password = 0Wangle?
+password = 123456
 database = financems
 
 [business]
