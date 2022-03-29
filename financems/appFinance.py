@@ -256,7 +256,6 @@ class AppFinance():
             # 账户类型限制
             if data["entity_type"] == 1 and data["ac_type"] == 4 or \
                 data["entity_type"] == 2 and data["ac_type"] == 3 or \
-                data["entity_type"] == 2 and data["ac_type"] == 4 or \
                 data["entity_type"] == 3 and data["ac_type"] == 2 or \
                 data["entity_type"] == 4 and data["ac_type"] == 2 or \
                 data["entity_type"] == 4 and data["ac_type"] == 3 or \
@@ -327,17 +326,10 @@ class AppFinance():
 
         return rtnData
 
-    def fGenerateBill(self, acObj, ac_type, busi_type, busi_bill, third_bill, orig_amt, real_amt, busi_summary, acDate=datetime.now()):
+    def fPutin(self, payType, dAmt, pay_time=datetime.now(), acDate=datetime.now()):
         """
-        生成账单
-        acObj               对方账户
-        ac_type             记账类型 1:收款 2:预收 3:预付 4:信用
-        busi_type           业务类型 1:充值 2:提现 3:安装 4:维修
-        busi_bill           业务单据号
-        third_bill          第三方单据号
-        orig_amt            原始交易金额
-        real_amt            实际交易金额
-        busi_summary        摘要
+        账户充值
+        dAmt                充值金额
         """
         rtnData = {
             "result": False,        # 逻辑控制 True/False
@@ -350,119 +342,36 @@ class AppFinance():
 
         bConn = False
         try:
-            # 数据初始化
-            if not self.bInit:
-                rtn = self.dataRefresh()
-                if not rtn["result"]:
-                    raise Exception("查询账户数据失败：" + rtn["info"])
-
             # 业务类型判断
-            if busi_type == 1:
-                # 充值场景
-                if self.o_ac_type != 2:
-                    raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可充值.")
-            elif busi_type == 2:
-                # 提现场景
-                if self.o_ac_type in [1, 3]:
-                    raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可提现.")
-            elif busi_type == 3:
-                # 还款场景
-                if self.o_ac_type != 4:
-                    raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可还款.")
-            else:
-                if not acObj:
-                    raise Exception("收款账户无效.")
-                else:
-                    rtn = acObj.dataRefresh()
-                    if not rtn["result"]:
-                        raise Exception("获取收款账户信息失败：" + rtn["info"])
+            if self.o_ac_type in (1, 4):
+                raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可充值.")
 
             # 金额判断
-            if not dAmt or dAmt <= 0:
-                raise Exception("交易金额无效.")
-            elif dAmt > 999999.99:
-                raise Exception("充值金额太大：{amt}，请检查是否正确".format(amt=dAmt))
-            if busi_type == 2 and self.o_ac_balance < dAmt:
-                raise Exception("提现金额不能大于账户余额.")
-            elif busi_type > 3:
-                if self.o_ac_type == 4 and self.o_ac_balance + self.o_credit_line < dAmt:
-                    raise Exception("账户授信额度{balance}不足.".format(balance=self.o_ac_balance))
+            pass
 
             # 数据库连接
             conn = self.dbFinance.GetConnect()
             bConn = True
-            cur = conn.cursor()
 
-            # 记录账单明细
-            if busi_type == 1 or busi_type == 3:
-                sSql = r"insert into ac_bill_flow ( in_ac, in_simple, ac_type, busi_type, busi_bill, third_bill, orig_amt, real_amt, ac_date, busi_summary, frush_flag, check_flag, pay_flag ) " + \
-                    r"values ({in_ac}, '{in_simple}', {ac_type}, {busi_type}, {busi_bill}, '{third_bill}', {orig_amt}, {real_amt}, '{ac_date}', '{busi_summary}', 0, 0, 1) ".format(
-                        in_ac=self.o_id,
-                        in_simple=self.o_simple_name,
-                        ac_type=ac_type,
-                        busi_type=busi_type,
-                        busi_bill=busi_bill,
-                        third_bill=third_bill,
-                        orig_amt=dAmt,
-                        real_amt=dAmt,
-                        ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                        busi_summary=busi_summary
-                    )
-            elif busi_type == 2:
-                sSql = r"insert into ac_bill_flow ( out_ac, out_simple, ac_type, busi_type, orig_amt, real_amt, ac_date, busi_summary, frush_flag, check_flag, pay_flag ) " + \
-                    r"values ({out_ac}, '{out_simple}', {ac_type}, {busi_type}, {orig_amt}, {real_amt}, '{ac_date}', '{busi_summary}', 0, 0, 1) ".format(
-                        out_ac=self.o_id,
-                        out_simple=self.o_simple_name,
-                        ac_type=ac_type,
-                        busi_type=busi_type,
-                        orig_amt=dAmt,
-                        real_amt=dAmt,
-                        ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                        busi_summary=busi_summary
-                    )
-            else:
-                sSql = r"insert into ac_bill_flow ( out_ac, out_simple, in_ac, in_simple, ac_type, busi_type, orig_amt, real_amt, ac_date, busi_summary, frush_flag, check_flag, pay_flag ) " + \
-                    r"values ({out_ac}, '{out_simple}', {in_ac}, '{in_simple}', {ac_type}, {busi_type}, {orig_amt}, {real_amt}, '{ac_date}', '{busi_summary}', 0, 0, 1) ".format(
-                        out_ac=self.o_id,
-                        out_simple=self.o_simple_name,
-                        in_ac=acObj.o_id,
-                        in_simple=acObj.o_simple_name,
-                        ac_type=ac_type,
-                        busi_type=busi_type,
-                        orig_amt=dAmt,
-                        real_amt=dAmt,
-                        ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                        busi_summary=busi_summary
-                    )
-            cur.execute(sSql)
-
-            # 授信额度更新
-            if self.o_ac_type == 4:
-                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and ac_balance={ac_balance}".format(
-                    id=self.o_id,
-                    amt=dAmt,
-                    ac_balance=self.o_ac_balance
-                )
-                num = cur.execute(sSql)
-                if num == 0:
-                    raise Exception("账户{name}数据已变动，更新授信额度失败，请重新操作.".format(name=self.o_name))
-            if acObj.o_ac_type == 4:
-                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id} and ac_balance={ac_balance}".format(
-                    id=acObj.o_id,
-                    amt=dAmt,
-                    ac_balance=acObj.o_ac_balance
-                )
-                num = cur.execute(sSql)
-                if num == 0:
-                    raise Exception("账户{name}数据已变动，更新授信额度失败，请重新操作.".format(name=acObj.o_name))
+            # 生成账单
+            rtn = self._generateBill(conn, 2, 1, dAmt, dAmt, '账户充值', acDate=acDate)
+            if not rtn["result"]:
+                raise Exception(rtn["info"])
+            iBill = rtn["dataNumber"]
+            
+            # 完成支付
+            rtn = self._generatePay(conn, iBill, {payType: dAmt}, pay_time=pay_time, acDate=acDate)
+            if not rtn["result"]:
+                raise Exception(rtn["info"])
 
             # 提交事务
             conn.commit()
             rtnData["result"] = True
+            rtnData["info"] = "充值成功。"
 
             rtn = self.fGetBanlance()
             if rtn["result"]:
-                rtnData["info"] = busi_summary + "成功."
+                rtnData["info"] += "账户当前余额：{amt}".format(amt=self.o_ac_balance)
             else:
                 rtnData["info"] += rtn["info"]
         except Exception as e:
@@ -475,11 +384,10 @@ class AppFinance():
 
         return rtnData
 
-    def fFrushBill(self, ac_bill, frush_remark, acDate=datetime.now()):
+    def fGetout(self, payType, dAmt, acDate=datetime.now()):
         """
-        账单冲红
-        ac_bill             账单ID
-        frush_remark        冲红备注
+        账户提现
+        dAmt                提现金额
         """
         rtnData = {
             "result": False,        # 逻辑控制 True/False
@@ -492,15 +400,174 @@ class AppFinance():
 
         bConn = False
         try:
+            # 业务类型判断
+            if self.o_ac_type == 4:
+                raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可提现.")
+
+            # 提现金额判断
+            self.dataRefresh()
+            if dAmt > self.o_ac_balance:
+                raise Exception("提现金额不可大于预付余额.")
+
+            # 数据库操作
+            conn = self.dbFinance.GetConnect()
+            bConn = True
+
+            # 生成账单
+            rtn = self._generateBill(conn, self.o_ac_type, 1, dAmt, dAmt, "账户提现")
+            if not rtn["result"]:
+                raise Exception(rtn["info"])
+            iBill = rtn["dataNumber"]
+
+            # 完成支付
+            rtn = self._generatePay(conn, iBill, [{"pay_type": payType, "pay_amt": dAmt}])
+            if not rtn["result"]:
+                raise Exception(rtn["info"])
+
+            # 提交事务
+            conn.commit()
+            rtnData["result"] = True
+            rtnData["info"] = "提现成功。"
+
+            rtn = self.fGetBanlance()
+            if rtn["result"]:
+                rtnData["info"] += "账户当前余额：{amt}".format(amt=self.o_ac_balance)
+            else:
+                rtnData["info"] += rtn["info"]
+        except Exception as e:
+            if bConn:
+                conn.rollback()
+            rtnData["info"] = str(e)
+        finally:
+            if bConn:
+                conn.close()
+
+        return rtnData
+
+    def _generateBill(self, conn, ac_type, busi_type, orig_amt, real_amt, busi_summary, acObj=None, busi_bill=None, third_bill=None, acDate=datetime.now()):
+        """
+        生成账单
+        conn                数据库连接
+        ac_type             记账类型 1:收款 2:预收 3:预付 4:信用
+        busi_type           业务类型 4:安装 5:维修
+        orig_amt            原始交易金额
+        real_amt            实际交易金额
+        busi_summary        摘要
+        acObj               对方账户
+        busi_bill           业务单据号
+        third_bill          第三方单据号
+        acDate              财务日期
+        """
+        rtnData = {
+            "result": False,        # 逻辑控制 True/False
+            "dataString": "",       # 字符串
+            "dataNumber": 0,        # 数字
+            "datetime": None,       # 日期时间
+            "info": "",             # 信息
+            "entities": {}
+        }
+
+        try:
+            # 参数有效性判断
+            if not AppFinance.c_data["记账类型"].get(ac_type):
+                raise Exception("不支持的记账类型[{ac_type}].".format(ac_type=ac_type))
+            if not AppFinance.c_data["业务类型"].get(busi_type):
+                raise Exception("不支持的业务类型[{busi_type}].".format(busi_type=busi_type))
+            if busi_type in (1,2,3):
+                raise Exception("账户类操作不需要生成账单.")
+            if real_amt <= 0 or not real_amt:
+                raise Exception("交易金额无效.")
+            if real_amt > 999999.99:
+                raise Exception("充值金额太大：{amt}，请检查是否正确".format(amt=real_amt))
+            if not busi_summary or len(busi_summary) == 0:
+                raise Exception("业务摘要无效.")
+            if not acObj:
+                raise Exception("请指定交易对方账号.")
+
+            # 数据初始化
+            if not self.bInit:
+                rtn = self.dataRefresh()
+                if not rtn["result"]:
+                    raise Exception("查询应付账户数据失败：" + rtn["info"])
+            if not acObj.bInit:
+                rtn = acObj.dataRefresh()
+                if not rtn["result"]:
+                    raise Exception("获取应收账户信息失败：" + rtn["info"])
+
+            # 获取游标
+            cur = conn.cursor()
+
+            # 记录账单明细
+            sSql = r"insert into ac_bill_flow ( out_ac, out_simple, in_ac, in_simple, ac_type, busi_type, orig_amt, real_amt, ac_date, busi_summary, frush_flag, check_flag, pay_flag ) " + \
+                r"values ({out_ac}, '{out_simple}', {in_ac}, '{in_simple}', {ac_type}, {busi_type}, {orig_amt}, {real_amt}, '{ac_date}', '{busi_summary}', 0, 0, 1) ".format(
+                    out_ac=self.o_id,
+                    out_simple=self.o_simple_name,
+                    in_ac=acObj.o_id,
+                    in_simple=acObj.o_simple_name,
+                    ac_type=ac_type,
+                    busi_type=busi_type,
+                    orig_amt=orig_amt,
+                    real_amt=real_amt,
+                    ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
+                    busi_summary=busi_summary
+                )
+            cur.execute(sSql)
+            iFlow = conn.insert_id()
+
+            # 授信额度更新
+            if self.o_ac_type == 4:
+                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id}".format(
+                    id=self.o_id,
+                    amt=real_amt
+                )
+                num = cur.execute(sSql)
+                if num != 1:
+                    raise Exception("账户{name}数据异常.".format(name=self.o_name))
+            if acObj.o_ac_type == 4:
+                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id}".format(
+                    id=acObj.o_id,
+                    amt=real_amt
+                )
+                num = cur.execute(sSql)
+                if num != 1:
+                    raise Exception("账户{name}数据异常.".format(name=acObj.o_name))
+
+            # 返回数据
+            rtnData["result"] = True
+            rtnData["dataNumber"] = iFlow
+            rtnData["info"] = busi_summary + "成功."
+        except Exception as e:
+            rtnData["info"] = str(e)
+        finally:
+            pass
+
+        return rtnData
+
+    def _frushBill(self, conn, ac_bill, frush_remark, acDate=datetime.now()):
+        """
+        账单冲红
+        conn                数据库连接
+        ac_bill             账单ID
+        frush_remark        冲红备注
+        acDate              财务日期
+        """
+        rtnData = {
+            "result": False,        # 逻辑控制 True/False
+            "dataString": "",       # 字符串
+            "dataNumber": 0,        # 数字
+            "datetime": None,       # 日期时间
+            "info": "",             # 信息
+            "entities": {}
+        }
+
+        try:
             # 数据初始化
             if not self.bInit:
                 rtn = self.dataRefresh()
                 if not rtn["result"]:
                     raise Exception("查询账户数据失败：" + rtn["info"])
 
-            # 数据库连接
-            conn = self.dbFinance.GetConnect()
-            bConn = True
+            # 获取游标
             cur = conn.cursor()
 
             # 获取原账单信息
@@ -544,56 +611,49 @@ class AppFinance():
                     frush_remark=frush_remark
                 )
             cur.execute(sSql)
-            billid = conn.insert_id()
+            iFlow = conn.insert_id()
 
             # 授信额度更新
             if self.o_ac_type == 4:
-                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id} and ac_balance={ac_balance}".format(
+                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id}".format(
                     id=self.o_id,
-                    amt=dAmt,
-                    ac_balance=self.o_ac_balance
+                    amt=lData["real_amt"]
                 )
                 num = cur.execute(sSql)
-                if num == 0:
-                    raise Exception("账户{name}数据已变动，更新授信额度失败，请重新操作.".format(name=self.o_name))
+                if num != 1:
+                    raise Exception("账户{name}数据异常.".format(name=self.o_name))
             acObj = AppFinance(AppFinance.c_sett, 1, {"type":1, "acID":lData["in_ac"]})
             if acObj.o_ac_type == 4:
-                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and ac_balance={ac_balance}".format(
+                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and".format(
                     id=acObj.o_id,
-                    amt=dAmt,
-                    ac_balance=acObj.o_ac_balance
+                    amt=lData["real_amt"]
                 )
                 num = cur.execute(sSql)
-                if num == 0:
-                    raise Exception("账户{name}数据已变动，更新授信额度失败，请重新操作.".format(name=acObj.o_name))
+                if num != 1:
+                    raise Exception("账户{name}数据异常.".format(name=acObj.o_name))
 
-            # 提交事务
-            conn.commit()
+            # 返回数据
             rtnData["result"] = True
-
-            rtn = self.fGetBanlance()
-            if rtn["result"]:
-                rtnData["info"] = "账单{id}已冲红.".format(id=ac_bill)
-            else:
-                rtnData["info"] += rtn["info"]
+            rtnData["dataNumber"] = iFlow
+            rtnData["info"] = "账单{id}已冲红.".format(id=ac_bill)
         except Exception as e:
-            if bConn:
-                conn.rollback()
             rtnData["info"] = str(e)
         finally:
-            if bConn:
-                conn.close()
+            pass
 
         return rtnData
 
-    def fGeneratePay(self, ac_bill, paylist, pay_time, acDate=datetime.now()):
+    def _generatePay(self, conn, busi_type, ac_bill, paylist, pay_time=datetime.now(), acDate=datetime.now()):
         """
         支付
+        conn                数据库连接
+        busi_type           业务类型 1:充值 2:提现 3:还款 4:安装 5:维修
         ac_bill             账单ID
         paylist             付款列表
             pay_type        付款方式
             pay_amt         付款金额
         pay_time            支付时间 为空时取当前服务器时间
+        acDate              财务日期
         """
         rtnData = {
             "result": False,        # 逻辑控制 True/False
@@ -604,150 +664,161 @@ class AppFinance():
             "entities": {}
         }
 
-        bConn = False
         try:
+            # 参数有效性判断
+            if not AppFinance.c_data["业务类型"].get(busi_type):
+                raise Exception("不支持的业务类型[{busi_type}].".format(busi_type=busi_type)) 
+            if len(paylist) == 0:
+                raise Exception("没有指定支付类型.")
+            for line in paylist:
+                if line["pay_type"] <= 0:
+                    raise Exception("支付类型[{pay_type}]无效.".format(pay_type=line["pay_type"]))
+                if not line["pay_amt"] or line["pay_amt"] <= 0:
+                    raise Exception("支付金额无效.")
+
             # 数据初始化
             if not self.bInit:
                 rtn = self.dataRefresh()
                 if not rtn["result"]:
                     raise Exception("查询账户数据失败：" + rtn["info"])
-
-            # 数据库连接
-            conn = self.dbFinance.GetConnect()
-            bConn = True
+            
+            # 获取游标
             cur = conn.cursor()
 
             # 获取原账单信息
-            lCol = ["out_ac", "out_simple", "in_ac", "in_simple", "ac_type", "busi_type", "orig_amt", "real_amt", "ac_date", "busi_summary", "frush_flag", "check_flag", "pay_flag"]
-            sSql = r""
-            for item in lCol:
-                sSql += ", " + item
-            sSql = r"select {cols} from ac_bill_flow where id={id}".format(
-                cols=sSql[2:len(sSql)],
-                id=ac_bill
-            )
-            cur.execute(sSql)
-            rs = cur.fetchall()
-            if len(rs) == 0:
-                raise Exception("账单ID{id}无效.".format(id=ac_bill))
-            elif len(rs) == 1:
-                if lData["out_ac"] != self.o_id:
-                    raise Exception("账单[{bill}]不属于{entity_type}账户{name}.".format(
-                        bill=ac_bill, 
-                        entity_type=AppFinance.c_data["实体类型"][self.o_entity_type],
-                        name=self.o_name
-                    ))
-                lData = dict(zip(lCol, rs[0]))
-            else:
-                raise Exception("账单ID{id}出现重复异常.")
-            
-            # 收款账号信息
-            if lData["in_ac"]:
-                acObj = AppFinance(AppFinance.c_sett, 1, {"type": 1, "acID": lData["in_ac"]})
-            
-            # 插入支付记录
-            if lData["busi_type"] == 1 or lData["busi_type"] == 3:
-                sSql = r"insert into ac_pay_flow ( in_ac, in_simple, in_balance, bill_flow, busi_type, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, check_flag ) " + \
-                    r"values ({in_ac}, '{in_simple}', {in_balance}, {bill_flow}, {busi_type}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 0, 0)".format(
-                        in_ac=self.o_id,
-                        in_simple=self.o_simple_name,
-                        in_balance=self.o_ac_balance + dAmt,
-                        bill_flow=billid,
-                        busi_type=lData["busi_type"],
-                        pay_type=payType,
-                        pay_amt=dAmt,
-                        pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
-                        ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                        busi_summary=lData["busi_summary"]
-                    )
-            elif lData["busi_type"] == 2:
-                sSql = r"insert into ac_pay_flow ( out_ac, out_simple, out_balance, bill_flow, busi_type, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, check_flag ) " + \
-                    r"values ({out_ac}, '{out_simple}', {out_balance}, {bill_flow}, {busi_type}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 0, 0)".format(
-                        out_ac=self.o_id,
-                        out_simple=self.o_simple_name,
-                        out_balance=self.o_ac_balance - dAmt,
-                        bill_flow=billid,
-                        busi_type=lData["busi_type"],
-                        pay_type=payType,
-                        pay_amt=dAmt,
-                        pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
-                        ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                        busi_summary=lData["busi_summary"]
-                    )
-            else:
-                sSql = r"insert into ac_pay_flow ( out_ac, out_simple, out_balance, in_ac, in_simple, in_balance, bill_flow, busi_type, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, check_flag ) " + \
-                    r"values ({out_ac}, '{out_simple}', {out_balance}, {in_ac}, '{in_simple}', {in_balance}, {bill_flow}, {busi_type}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 0, 0)".format(
-                        out_ac=self.o_id,
-                        out_simple=self.o_simple_name,
-                        out_balance=self.o_ac_balance - dAmt,
-                        in_ac=acObj.o_id,
-                        in_simple=acObj.o_simple_name,
-                        in_balance=acObj.o_ac_balance + dAmt,
-                        bill_flow=billid,
-                        busi_type=lData["busi_type"],
-                        pay_type=payType,
-                        pay_amt=dAmt,
-                        pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
-                        ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                        busi_summary=lData["busi_summary"]
-                    )
-            cur.execute(sSql)
+            if busi_type not in (1,2,3):
+                lCol = ["out_ac", "out_simple", "in_ac", "in_simple", "ac_type", "busi_type", "orig_amt", "real_amt", "ac_date", "busi_summary", "frush_flag", "check_flag", "pay_flag"]
+                sSql = r""
+                for item in lCol:
+                    sSql += ", " + item
+                sSql = r"select {cols} from ac_bill_flow where id={id}".format(
+                    cols=sSql[2:len(sSql)],
+                    id=ac_bill
+                )
+                cur.execute(sSql)
+                rs = cur.fetchall()
+                if len(rs) == 0:
+                    raise Exception("账单ID{id}无效.".format(id=ac_bill))
+                elif len(rs) == 1:
+                    lData = dict(zip(lCol, rs[0]))
+                    if lData["out_ac"] != self.o_id:
+                        raise Exception("账单[{bill}]不属于{entity_type}账户{name}.".format(
+                            bill=ac_bill, 
+                            entity_type=AppFinance.c_data["实体类型"][self.o_entity_type],
+                            name=self.o_name
+                        ))
+                else:
+                    raise Exception("账单ID{id}出现重复异常.")
+                if busi_type != lData["busi_type"]:
+                    raise Exception("业务类型[{busi_type}]与账单[{bill_type}]不匹配.".format(busi_type=busi_type, bill_type=lData["busi_type"]))
+                
+                # 检查支付金额是否匹配
+                paySum = 0
+                for line in paylist:
+                    paySum += line["pay_amt"]
+                if paySum != lData["real_amt"]:
+                    raise Exception("支付金额必须等于应付金额.")
+                
+                # 收款账号信息
+                if lData["in_ac"]:
+                    acObj = AppFinance(AppFinance.c_sett, 1, {"type": 1, "acID": lData["in_ac"]})
+
+            iFlow = []
+            for line in paylist:
+                # 插入支付记录
+                if lData["busi_type"] == 1 or lData["busi_type"] == 3:
+                    sSql = r"insert into ac_pay_flow ( in_ac, in_simple, in_balance, busi_type, bill_flow, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, check_flag ) " + \
+                        r"values ({in_ac}, '{in_simple}', {in_balance}, {busi_type}, {bill_flow}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 0, 0)".format(
+                            in_ac=self.o_id,
+                            in_simple=self.o_simple_name,
+                            in_balance=self.o_ac_balance + line["pay_amt"],
+                            busi_type=busi_type,
+                            bill_flow=None,
+                            pay_type=line["pay_type"],
+                            pay_amt=line["pay_amt"],
+                            pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
+                            ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
+                            busi_summary='充值/还款'
+                        )
+                elif lData["busi_type"] == 2:
+                    sSql = r"insert into ac_pay_flow ( out_ac, out_simple, out_balance, busi_type, bill_flow, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, check_flag ) " + \
+                        r"values ({out_ac}, '{out_simple}', {out_balance}, {busi_type}, {bill_flow}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 0, 0)".format(
+                            out_ac=self.o_id,
+                            out_simple=self.o_simple_name,
+                            out_balance=self.o_ac_balance - line["pay_amt"],
+                            busi_type=busi_type,
+                            bill_flow=None,
+                            pay_type=line["pay_type"],
+                            pay_amt=line["pay_amt"],
+                            pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
+                            ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
+                            busi_summary='提现'
+                        )
+                else:
+                    sSql = r"insert into ac_pay_flow ( out_ac, out_simple, out_balance, in_ac, in_simple, in_balance, bill_flow, busi_type, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, check_flag ) " + \
+                        r"values ({out_ac}, '{out_simple}', {out_balance}, {in_ac}, '{in_simple}', {in_balance}, {bill_flow}, {busi_type}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 0, 0)".format(
+                            out_ac=self.o_id,
+                            out_simple=self.o_simple_name,
+                            out_balance=self.o_ac_balance - line["pay_amt"],
+                            in_ac=acObj.o_id,
+                            in_simple=acObj.o_simple_name,
+                            in_balance=acObj.o_ac_balance + line["pay_amt"],
+                            bill_flow=billid,
+                            busi_type=lData["busi_type"],
+                            pay_type=line["pay_type"],
+                            pay_amt=line["pay_amt"],
+                            pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
+                            ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
+                            busi_summary=lData["busi_summary"]
+                        )
+                cur.execute(sSql)
+                iFlow.append(conn.insert_id())
 
             # 余额更新
             if lData["busi_type"] in [1, 3]:
-                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id} and ac_balance={ac_balance}".format(
+                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id}".format(
                     id=self.o_id,
-                    amt=dAmt,
-                    ac_balance=self.o_ac_balance
+                    amt=paySum
                 )
             elif lData["busi_type"] == 2:
-                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and ac_balance={ac_balance}".format(
+                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id}".format(
                     id=self.o_id,
-                    amt=dAmt,
-                    ac_balance=self.o_ac_balance
+                    amt=paySum
                 )
             else:
-                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and ac_balance={ac_balance}".format(
+                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id}".format(
                     id=self.o_id,
-                    amt=dAmt,
-                    ac_balance=self.o_ac_balance
+                    amt=paySum
                 )
                 num = cur.execute(sSql)
-                if num == 0:
-                    raise Exception("账户{name}数据已变动，更新授信额度失败，请重新操作.".format(name=self.o_name))
-                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id} and ac_balance={ac_balance}".format(
+                if num != 1:
+                    raise Exception("账户{name}数据异常.".format(name=self.o_name))
+                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id}".format(
                     id=acObj.o_id,
-                    amt=dAmt,
-                    ac_balance=acObj.o_ac_balance
+                    amt=paySum
                 )
             num = cur.execute(sSql)
-            if num == 0:
-                raise Exception("账户{name}数据已变动，更新授信额度失败，请重新操作.".format(name=self.o_name))
+            if num != 1:
+                raise Exception("账户{name}数据异常.".format(name=self.o_name))
 
-            # 提交事务
-            conn.commit()
+            # 返回数据
             rtnData["result"] = True
-
-            rtn = self.fGetBanlance()
-            if rtn["result"]:
-                rtnData["info"] = "账单{id}支付完成.".format(id=ac_bill)
-            else:
-                rtnData["info"] += rtn["info"]
+            rtnData["entities"] = iFlow
+            rtnData["info"] = "账单{id}支付完成.".format(id=ac_bill)
         except Exception as e:
-            if bConn:
-                conn.rollback()
             rtnData["info"] = str(e)
         finally:
-            if bConn:
-                conn.close()
+            pass
 
         return rtnData
 
-    def fFrushPay(self, pay_flow, frush_remark, acDate=datetime.now()):
+    def _frushPay(self, conn, pay_flow, frush_remark, acDate=datetime.now()):
         """
         支付冲红
+        conn                数据库连接
         pay_flow            支付ID
         frush_remark        冲红备注
+        acDate              财务日期
         """
         rtnData = {
             "result": False,        # 逻辑控制 True/False
@@ -758,7 +829,6 @@ class AppFinance():
             "entities": {}
         }
 
-        bConn = False
         try:
             # 数据初始化
             if not self.bInit:
@@ -766,13 +836,11 @@ class AppFinance():
                 if not rtn["result"]:
                     raise Exception("查询账户数据失败：" + rtn["info"])
 
-            # 数据库连接
-            conn = self.dbFinance.GetConnect()
-            bConn = True
+            # 获取游标
             cur = conn.cursor()
 
             # 获取原支付信息
-            lCol = ["out_ac", "out_simple", "out_balance", "in_ac", "in_simple", "in_balance", "bill_flow", "busi_type", "pay_type", "pay_amt", "pay_time", "ac_date", "busi_summary", "frush_flag", "check_flag"]
+            lCol = ["out_ac", "out_simple", "out_balance", "in_ac", "in_simple", "in_balance", "busi_type", "bill_flow", "pay_type", "pay_amt", "pay_time", "ac_date", "busi_summary", "frush_flag", "check_flag"]
             sSql = r""
             for item in lCol:
                 sSql += ", " + item
@@ -801,15 +869,15 @@ class AppFinance():
             
             # 插入支付记录
             if lData["busi_type"] == 1 or lData["busi_type"] == 3:
-                sSql = r"insert into ac_pay_flow ( in_ac, in_simple, in_balance, bill_flow, busi_type, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, frush_bill, frush_remark, check_flag ) " + \
-                    r"values ({in_ac}, '{in_simple}', {in_balance}, {bill_flow}, {busi_type}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
+                sSql = r"insert into ac_pay_flow ( in_ac, in_simple, in_balance, busi_type, bill_flow, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, frush_bill, frush_remark, check_flag ) " + \
+                    r"values ({in_ac}, '{in_simple}', {in_balance}, {busi_type}, {bill_flow}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
                         in_ac=self.o_id,
                         in_simple=self.o_simple_name,
-                        in_balance=self.o_ac_balance + dAmt,
+                        in_balance=self.o_ac_balance + lData["pay_amt"],
                         bill_flow=billid,
                         busi_type=lData["busi_type"],
                         pay_type=payType,
-                        pay_amt=-dAmt,
+                        pay_amt=-lData["pay_amt"],
                         pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
                         ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
                         busi_summary=lData["busi_summary"],
@@ -817,15 +885,15 @@ class AppFinance():
                         frush_remark=frush_remark
                     )
             elif lData["busi_type"] == 2:
-                sSql = r"insert into ac_pay_flow ( out_ac, out_simple, out_balance, bill_flow, busi_type, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, frush_bill, frush_remark, check_flag ) " + \
-                    r"values ({out_ac}, '{out_simple}', {out_balance}, {bill_flow}, {busi_type}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
+                sSql = r"insert into ac_pay_flow ( out_ac, out_simple, out_balance, busi_type, bill_flow, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, frush_bill, frush_remark, check_flag ) " + \
+                    r"values ({out_ac}, '{out_simple}', {out_balance}, {busi_type}, {bill_flow}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
                         out_ac=self.o_id,
                         out_simple=self.o_simple_name,
-                        out_balance=self.o_ac_balance - dAmt,
-                        bill_flow=billid,
+                        out_balance=self.o_ac_balance - lData["pay_amt"],
                         busi_type=lData["busi_type"],
+                        bill_flow=billid,
                         pay_type=payType,
-                        pay_amt=-dAmt,
+                        pay_amt=-lData["pay_amt"],
                         pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
                         ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
                         busi_summary=lData["busi_summary"],
@@ -833,18 +901,18 @@ class AppFinance():
                         frush_remark=frush_remark
                     )
             else:
-                sSql = r"insert into ac_pay_flow ( out_ac, out_simple, out_balance, in_ac, in_simple, in_balance, bill_flow, busi_type, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, frush_bill, frush_remark, check_flag ) " + \
-                    r"values ({out_ac}, '{out_simple}', {out_balance}, {in_ac}, '{in_simple}', {in_balance}, {bill_flow}, {busi_type}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
+                sSql = r"insert into ac_pay_flow ( out_ac, out_simple, out_balance, in_ac, in_simple, in_balance, busi_type, bill_flow, pay_type, pay_amt, pay_time, ac_date, busi_summary, frush_flag, frush_bill, frush_remark, check_flag ) " + \
+                    r"values ({out_ac}, '{out_simple}', {out_balance}, {in_ac}, '{in_simple}', {in_balance}, {busi_type}, {bill_flow}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
                         out_ac=self.o_id,
                         out_simple=self.o_simple_name,
-                        out_balance=self.o_ac_balance - dAmt,
+                        out_balance=self.o_ac_balance - lData["pay_amt"],
                         in_ac=acObj.o_id,
                         in_simple=acObj.o_simple_name,
-                        in_balance=acObj.o_ac_balance + dAmt,
-                        bill_flow=billid,
+                        in_balance=acObj.o_ac_balance + lData["pay_amt"],
                         busi_type=lData["busi_type"],
+                        bill_flow=billid,
                         pay_type=payType,
-                        pay_amt=-dAmt,
+                        pay_amt=-lData["pay_amt"],
                         pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
                         ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
                         busi_summary=lData["busi_summary"],
@@ -852,250 +920,44 @@ class AppFinance():
                         frush_remark=frush_remark
                     )
             cur.execute(sSql)
+            iFlow = conn.insert_id()
 
             # 余额更新
             if lData["busi_type"] in [1, 3]:
-                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id} and ac_balance={ac_balance}".format(
+                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id}".format(
                     id=self.o_id,
-                    amt=dAmt,
-                    ac_balance=self.o_ac_balance
+                    amt=dAmt
                 )
             elif lData["busi_type"] == 2:
-                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and ac_balance={ac_balance}".format(
+                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id}".format(
                     id=self.o_id,
-                    amt=dAmt,
-                    ac_balance=self.o_ac_balance
+                    amt=dAmt
                 )
             else:
-                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and ac_balance={ac_balance}".format(
+                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id}".format(
                     id=self.o_id,
-                    amt=dAmt,
-                    ac_balance=self.o_ac_balance
+                    amt=dAmt
                 )
                 num = cur.execute(sSql)
-                if num == 0:
-                    raise Exception("账户{name}数据已变动，更新授信额度失败，请重新操作.".format(name=self.o_name))
+                if num != 1:
+                    raise Exception("账户{name}数据异常.".format(name=self.o_name))
                 sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id} and ac_balance={ac_balance}".format(
                     id=acObj.o_id,
                     amt=dAmt,
                     ac_balance=acObj.o_ac_balance
                 )
             num = cur.execute(sSql)
-            if num == 0:
-                raise Exception("账户{name}数据已变动，更新授信额度失败，请重新操作.".format(name=self.o_name))
+            if num != 1:
+                raise Exception("账户{name}数据异常.".format(name=self.o_name))
 
-            # 提交事务
-            conn.commit()
+            # 返回数据
             rtnData["result"] = True
-
-            rtn = self.fGetBanlance()
-            if rtn["result"]:
-                rtnData["info"] = "支付{id}已冲红.".format(id=pay_flow)
-            else:
-                rtnData["info"] += rtn["info"]
+            rtnData["dataNumber"] = iFlow
+            rtnData["info"] = "支付{id}已冲红.".format(id=pay_flow)
         except Exception as e:
-            if bConn:
-                conn.rollback()
             rtnData["info"] = str(e)
         finally:
-            if bConn:
-                conn.close()
-
-        return rtnData
-
-    def fPutin(self, payType, dAmt, acDate=datetime.now()):
-        """
-        账户充值
-        dAmt                充值金额
-        """
-        rtnData = {
-            "result": False,        # 逻辑控制 True/False
-            "dataString": "",       # 字符串
-            "dataNumber": 0,        # 数字
-            "datetime": None,       # 日期时间
-            "info": "",             # 信息
-            "entities": {}
-        }
-
-        bConn = False
-        try:
-            # 数据初始化
-            if not self.bInit:
-                rtn = self.dataRefresh()
-                if not rtn["result"]:
-                    raise Exception("查询账户数据失败：" + rtn["info"])
-
-            # 账户类型判断
-            if self.o_entity_type not in [2, 3]:
-                raise Exception(AppFinance.c_data["实体类型"][self.o_entity_type] + "不可充值.")
-
-            # 充值金额判断
-            if not dAmt or dAmt <= 0:
-                raise Exception("充值金额无效.")
-            elif dAmt > 999999.99:
-                raise Exception("充值金额太大：{amt}，请检查是否正确".format(amt=dAmt))
-
-            # 数据库操作
-            conn = self.dbFinance.GetConnect()
-            bConn = True
-            cur = conn.cursor()
-
-            # 充值
-            sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id} and ac_balance={ac_balance}".format(
-                id=self.o_id,
-                amt=dAmt,
-                ac_balance=self.o_ac_balance
-            )
-            num = cur.execute(sSql)
-            if num == 0:
-                raise Exception("账户数据已变动，充值失败，请重新操作.")
-
-            # 记录账单明细
-            sSql = r"insert into ac_bill_flow ( in_ac, in_simple, fund_type, ac_type, busi_type, orig_amt, real_amt, ac_date, busi_summary, frush_flag, check_flag, pay_flag ) " + \
-                r"values ({in_ac}, '{in_simple}', {fun_type}, {ac_type}, {busi_type}, {orig_amt}, {real_amt}, '{ac_date}', '{busi_summary}', 0, 0, 1) ".format(
-                    in_ac=self.o_id,
-                    in_simple=self.o_simple_name,
-                    fun_type=2,
-                    ac_type=2,
-                    busi_type=1,
-                    orig_amt=dAmt,
-                    real_amt=dAmt,
-                    ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                    busi_summary='预付账户充值'
-                )
-            cur.execute(sSql)
-            billid = conn.insert_id()
-
-            # 记录付款流水
-            sSql = r"insert into ac_pay_flow ( in_ac, in_simple, in_balance, bill_flow, fun_type, pay_type, pay_amt, pay_time, frush_flag, check_flag ) " + \
-                r"values ({in_ac}, '{in_simple}', {in_balance}, {bill_flow}, {fun_type}, '{pay_type}', {pay_amt}, '{pay_time}', 0, 0)".format(
-                    in_ac=self.o_id,
-                    in_simple=self.o_simple_name,
-                    in_balance=self.o_ac_balance + dAmt,
-                    bill_flow=billid,
-                    fun_type=2,
-                    pay_type=payType,
-                    pay_amt=dAmt,
-                    pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S')
-                )
-            cur.execute(sSql)
-
-            # 提交事务
-            conn.commit()
-            rtnData["result"] = True
-            rtnData["info"] = "充值成功。"
-
-            rtn = self.fGetBanlance()
-            if rtn["result"]:
-                rtnData["info"] += "账户当前余额：{amt}".format(amt=self.o_ac_balance)
-            else:
-                rtnData["info"] += rtn["info"]
-        except Exception as e:
-            if bConn:
-                conn.rollback()
-            rtnData["info"] = str(e)
-        finally:
-            if bConn:
-                conn.close()
-
-        return rtnData
-
-    def fGetout(self, payType, dAmt, acDate=datetime.now()):
-        """
-        账户提现
-        dAmt                提现金额
-        """
-        rtnData = {
-            "result": False,        # 逻辑控制 True/False
-            "dataString": "",       # 字符串
-            "dataNumber": 0,        # 数字
-            "datetime": None,       # 日期时间
-            "info": "",             # 信息
-            "entities": {}
-        }
-
-        bConn = False
-        try:
-            # 数据初始化
-            if not self.bInit:
-                rtn = self.dataRefresh()
-                if not rtn["result"]:
-                    raise Exception("查询账户数据失败：" + rtn["info"])
-
-            # 账户类型判断
-            if self.o_entity_type not in [2]:
-                raise Exception(AppFinance.c_data["实体类型"][self.o_entity_type] + "不可提现.")
-
-            # 提现金额判断
-            if not dAmt or dAmt <= 0:
-                raise Exception("提现金额无效.")
-            elif dAmt > 999999.99:
-                raise Exception("提现金额太大：{amt}，请检查是否正确".format(amt=dAmt))
-            elif dAmt > self.o_ac_balance:
-                raise Exception("提现金额不可大于预付余额.")
-
-            # 数据库操作
-            conn = self.dbFinance.GetConnect()
-            bConn = True
-            cur = conn.cursor()
-
-            # 提现
-            sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and ac_balance={ac_balance}".format(
-                id=self.o_id,
-                amt=dAmt,
-                ac_balance=self.o_ac_balance
-            )
-            num = cur.execute(sSql)
-            if num == 0:
-                raise Exception("账户数据已变动，提现失败，请重新操作.")
-
-            # 记录账单明细
-            sSql = r"insert into ac_bill_flow ( out_ac, out_simple, fund_type, ac_type, busi_type, orig_amt, real_amt, ac_date, busi_summary, frush_flag, check_flag, pay_flag ) " + \
-                r"values ({out_ac}, '{out_simple}', {fun_type}, {ac_type}, {busi_type}, {orig_amt}, {real_amt}, '{ac_date}', '{busi_summary}', 0, 0, 1) ".format(
-                    out_ac=self.o_id,
-                    out_simple=self.o_simple_name,
-                    fun_type=3,
-                    ac_type=2,
-                    busi_type=1,
-                    orig_amt=dAmt,
-                    real_amt=dAmt,
-                    ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                    busi_summary='预付账户提现'
-                )
-            cur.execute(sSql)
-            billid = conn.insert_id()
-
-            # 记录付款流水
-            sSql = r"insert into ac_pay_flow ( out_ac, out_simple, in_balance, bill_flow, fun_type, pay_type, pay_amt, pay_time, frush_flag, check_flag ) " + \
-                r"values ({out_ac}, '{out_simple}', {out_balance}, {bill_flow}, {fun_type}, '{pay_type}', {pay_amt}, '{pay_time}', 0, 0)".format(
-                    out_ac=self.o_id,
-                    out_simple=self.o_simple_name,
-                    out_balance=self.o_ac_balance - dAmt,
-                    bill_flow=billid,
-                    fun_type=2,
-                    pay_type=payType,
-                    pay_amt=dAmt,
-                    pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S')
-                )
-            cur.execute(sSql)
-
-            # 提交事务
-            conn.commit()
-            rtnData["result"] = True
-            rtnData["info"] = "充值成功。"
-
-            rtn = self.fGetBanlance()
-            if rtn["result"]:
-                rtnData["info"] += "账户当前余额：{amt}".format(amt=self.o_ac_balance)
-            else:
-                rtnData["info"] += rtn["info"]
-        except Exception as e:
-            if bConn:
-                conn.rollback()
-            rtnData["info"] = str(e)
-        finally:
-            if bConn:
-                conn.close()
+            pass
 
         return rtnData
 
@@ -1108,20 +970,20 @@ if __name__ == "__main__":
     mySett = Settings(myPath, "config")
 
     myAcc = AppFinance(mySett, 0)
-    # rtn = myAcc.fCreateAc({"name": "CSP客户服务平台", "simple_name": "CSP", "entity_type": 1, "entity_id": 1, "ac_type": 1, "check_flag": 0})
+    # rtn = myAcc.fCreateAc({"name": "CSP客户服务平台", "simple_name": "CSP", "entity_type": 1, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
     # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "巧匠上门服务有限公司", "simple_name": "巧匠上门", "entity_type": 2, "entity_id": 1, "ac_type": 1, "check_flag": 0})
+    # rtn = myAcc.fCreateAc({"name": "巧匠上门服务有限公司", "simple_name": "巧匠上门", "entity_type": 2, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
     # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "鲁班到家家居售后服务平台", "simple_name": "鲁班到家", "entity_type": 2, "entity_id": 2, "ac_type": 1, "check_flag": 0})
+    # rtn = myAcc.fCreateAc({"name": "鲁班到家家居售后服务平台", "simple_name": "鲁班到家", "entity_type": 2, "entity_id": 2, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
     # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "鲁班到家家居售后服务平台", "simple_name": "鲁班到家", "entity_type": 2, "entity_id": 2, "ac_type": 2, "check_flag": 0})
+    # rtn = myAcc.fCreateAc({"name": "鲁班到家家居售后服务平台", "simple_name": "鲁班到家", "entity_type": 2, "entity_id": 2, "ac_type": 2, "credit_line": 0.00, "check_flag": 0})
     # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "万师傅家居服务平台", "simple_name": "万师傅", "entity_type": 2, "entity_id": 3, "ac_type": 3, "check_flag": 0})
+    # rtn = myAcc.fCreateAc({"name": "万师傅家居服务平台", "simple_name": "万师傅", "entity_type": 2, "entity_id": 3, "ac_type": 4, "credit_line": 10000.00, "check_flag": 0})
     # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "石将军家居服务有限公司", "simple_name": "石将军", "entity_type": 3, "entity_id": 1, "ac_type": 2, "check_flag": 0})
+    # rtn = myAcc.fCreateAc({"name": "石将军家居服务有限公司", "simple_name": "石将军", "entity_type": 3, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
     # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "华南万达家居服务有限公司", "simple_name": "华南万达", "entity_type": 3, "entity_id": 2, "ac_type": 3, "check_flag": 0})
+    # rtn = myAcc.fCreateAc({"name": "华南万达家居服务有限公司", "simple_name": "华南万达", "entity_type": 3, "entity_id": 2, "ac_type": 3, "credit_line": 0.00, "check_flag": 0})
     # print(rtn["info"]) 
     myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 2})
-    rtn = myAcc.fPutin(100)
-    print(rtn["info"])
+    rtn = myAcc.fPutin(4, 800)
+    # print(rtn["info"])
