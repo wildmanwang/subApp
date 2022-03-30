@@ -45,7 +45,7 @@ class Settings():
         self.tmpFilePath = self.config.get("business", "tmpFilePath")
         self.asoBillInterval = self.config.getint("business", "asoBillInterval")
         self.jdBillInterval = self.config.getint("business", "jdBillInterval")
-        self.jdBillBreakpoint = self.config.getfloat("business", "jdBillBreakpoint")
+        self.jdBillBreakpoint = self.config.get("business", "jdBillBreakpoint")
         self.dataAccess = self.config.get("business", "dataAccess")         # request:http请求 db:数据库直连
         if self.dataAccess != "db":
             self.dataAccess = "request"
