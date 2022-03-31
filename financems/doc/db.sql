@@ -5,7 +5,7 @@ create table ac_account(
     simple_name     varchar(20) not null                comment '账户简称',
     entity_type     tinyint not null                    comment '实体类型 1:平台 2:服务商 3:商家 4:师傅',
     entity_id       int not null                        comment '实体ID',
-    ac_type         tinyint not null                    comment '记账类型 1:收款 2:预收 3:预付 4:信用',
+    ac_type         tinyint not null                    comment '记账类型 1:收付 2:预收 3:预付 4:信用',
     ac_balance      decimal(12,2) default 0.00          comment '账户余额',
     ac_balance_time datetime                            comment '账户余额更新时间',
     credit_line     decimal(12,2) default 0.00          comment '信用账户授信额度',
@@ -24,7 +24,7 @@ create table ac_bill_flow(
     out_simple      varchar(20)                         comment '应付账户简称',
     in_ac           int                                 comment '应收账户',
     in_simple       varchar(20)                         comment '应收账户简称',
-    ac_type         tinyint not null                    comment '记账类型 1:收款 2:预收 3:预付 4:信用',
+    ac_type         tinyint not null                    comment '记账类型 1:收付 2:预收 3:预付 4:信用',
     busi_type       tinyint not null                    comment '业务类型 1:充值 2:提现 3:还款 4:安装 5:维修',
     busi_bill       varchar(50)                         comment '业务单据号',
     third_bill      varchar(50)                         comment '第三方单据号',
@@ -106,7 +106,7 @@ insert into base_dict ( bd_type, bd_label, bd_value ) values ( '实体类型', '
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '实体类型', '服务商', 2 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '实体类型', '商家', 3 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '实体类型', '师傅', 4 );
-insert into base_dict ( bd_type, bd_label, bd_value ) values ( '记账类型', '收款', 1 );
+insert into base_dict ( bd_type, bd_label, bd_value ) values ( '记账类型', '收付', 1 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '记账类型', '预收', 2 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '记账类型', '预付', 3 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '记账类型', '信用', 4 );
