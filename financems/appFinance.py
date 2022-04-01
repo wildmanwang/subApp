@@ -610,7 +610,7 @@ class AppFinance():
                     orig_amt=lData["orig_amt"],
                     real_amt= -1 * lData["real_amt"],
                     ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                    busi_summary=busi_summary + "冲红",
+                    busi_summary=lData["busi_summary"],
                     frush_bill=ac_bill,
                     frush_remark=frush_remark,
                     pay_flag=iPayFlag
@@ -760,10 +760,10 @@ class AppFinance():
                         r"values ({in_ac}, '{in_simple}', {in_balance}, {busi_type}, {bill_flow}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
                             in_ac=self.o_id,
                             in_simple=self.o_simple_name,
-                            in_balance=self.o_ac_balance + line["pay_amt"],
-                            bill_flow=billid,
+                            in_balance=self.o_ac_balance - line["pay_amt"],
+                            bill_flow=iBill if bBillFlag else "NULL",
                             busi_type=line["busi_type"],
-                            pay_type=payType,
+                            pay_type=line["pay_type"],
                             pay_amt=-line["pay_amt"],
                             pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
                             ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
@@ -776,10 +776,10 @@ class AppFinance():
                         r"values ({out_ac}, '{out_simple}', {out_balance}, {busi_type}, {bill_flow}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
                             out_ac=self.o_id,
                             out_simple=self.o_simple_name,
-                            out_balance=self.o_ac_balance - line["pay_amt"],
+                            out_balance=self.o_ac_balance + line["pay_amt"],
                             busi_type=line["busi_type"],
-                            bill_flow=billid,
-                            pay_type=payType,
+                            bill_flow=iBill if bBillFlag else "NULL",
+                            pay_type=line["pay_type"],
                             pay_amt=-line["pay_amt"],
                             pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
                             ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
@@ -792,13 +792,13 @@ class AppFinance():
                         r"values ({out_ac}, '{out_simple}', {out_balance}, {in_ac}, '{in_simple}', {in_balance}, {busi_type}, {bill_flow}, '{pay_type}', {pay_amt}, '{pay_time}', '{ac_date}', '{busi_summary}', 1, {frush_bill}, '{frush_remark}', 0)".format(
                             out_ac=self.o_id,
                             out_simple=self.o_simple_name,
-                            out_balance=self.o_ac_balance - line["pay_amt"],
+                            out_balance=self.o_ac_balance + line["pay_amt"],
                             in_ac=acObj.o_id,
                             in_simple=acObj.o_simple_name,
-                            in_balance=acObj.o_ac_balance + line["pay_amt"],
+                            in_balance=acObj.o_ac_balance - line["pay_amt"],
                             busi_type=line["busi_type"],
-                            bill_flow=billid,
-                            pay_type=payType,
+                            bill_flow=iBill if bBillFlag else "NULL",
+                            pay_type=line["pay_type"],
                             pay_amt=-line["pay_amt"],
                             pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
                             ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
@@ -810,12 +810,12 @@ class AppFinance():
                 iFlow = conn.insert_id()
 
                 # 余额更新
-                if lData["busi_type"] in [1, 3]:
+                if line["busi_type"] in [1, 3]:
                     sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id}".format(
                         id=self.o_id,
                         amt=line["pay_amt"]
                     )
-                elif lData["busi_type"] == 2:
+                elif line["busi_type"] == 2:
                     sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id}".format(
                         id=self.o_id,
                         amt=line["pay_amt"]
@@ -1096,12 +1096,12 @@ class AppFinance():
                             in_simple=acObj.o_simple_name,
                             in_balance=acObj.o_ac_balance + line["pay_amt"],
                             bill_flow=billid,
-                            busi_type=lData["busi_type"],
+                            busi_type=line["busi_type"],
                             pay_type=line["pay_type"],
                             pay_amt=line["pay_amt"],
                             pay_time=datetime.strftime(acDate, '%Y-%m-%d %H:%M:%S'),
                             ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
-                            busi_summary=lData["busi_summary"]
+                            busi_summary=line["busi_summary"]
                         )
                 cur.execute(sSql)
                 iFlow.append(conn.insert_id())
@@ -1208,6 +1208,11 @@ if __name__ == "__main__":
     # print(rtn["info"])
 
     # 鲁班到家充值500冲红
-    myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 2})
-    # myAcc.fFrushPay(9, "充多了退回来")
-    print(rtn["info"])
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 2})
+    # rtn = myAcc.fFrushPay(9, "充多了退回来")
+    # print(rtn["info"])
+
+    # 石将军实付CSP佣金80
+    # myAccFrom = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 6, "acType": 1})
+    # myAccTo = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 1})
+    # rtn = myAcc.f
