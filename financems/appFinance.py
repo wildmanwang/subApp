@@ -1215,4 +1215,5 @@ if __name__ == "__main__":
     # 石将军实付CSP佣金80
     # myAccFrom = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 6, "acType": 1})
     # myAccTo = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 1})
-    # rtn = myAcc.f
+    # rtn = myAccFrom.fGenerateBill(ac_type, busi_type, orig_amt, real_amt, busi_summary)
+    # rtn = myAccFrom._generatePay(conn, busi_type, paylist)
