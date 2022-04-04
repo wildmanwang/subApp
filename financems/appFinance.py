@@ -864,11 +864,246 @@ class AppFinance():
 
         return rtnData
 
-    def _generateBill(self, conn, ac_type, busi_type, orig_amt, real_amt, busi_summary, acObj=None, busi_bill=None, third_bill=None, acDate=datetime.now()):
+    def busi_new(self, orig_amt, real_amt, acObj, busi_type, busi_bill, third_bill=None, acDate=datetime.now()):
+        """
+        新增业务
+        """
+        rtnData = {
+            "result": False,        # 逻辑控制 True/False
+            "dataString": "",       # 字符串
+            "dataNumber": 0,        # 数字
+            "datetime": None,       # 日期时间
+            "info": "",             # 信息
+            "entities": {}
+        }
+
+        bConn = False
+        try:
+            # 数据初始化
+            if not self.bInit:
+                rtn = self.dataRefresh()
+                if not rtn["result"]:
+                    raise Exception("查询账户数据失败：" + rtn["info"])
+            if not acObj.bInit:
+                rtn = acObj.dataRefresh()
+                if not rtn["result"]:
+                    raise Exception("查询对方账户数据失败：" + rtn["info"])
+
+            # 数据库连接
+            conn = self.dbFinance.GetConnect()
+            bConn = True
+            cur = conn.cursor()
+
+            ## 商家应付平台佣金
+            # 商家账号有效性判断
+            if self.o_entity_type != 3:
+                raise Exception("请从{en_type}账户生成账单.".format(en_type=AppFinance["实体类型"][3]))
+            if self.o_ac_type == 3:
+                raise Exception("{en_type}的{ac_type}账户不支持生成账单.".format(
+                    en_type=AppFinance["实体类型"][3],
+                    ac_type=AppFinance.c_data["记账类型"][self.o_ac_type])
+                )
+            # 平台账号有效性判断
+            if acObj.o_entity_type != 1:
+                raise Exception("请选择{en_type}账户做收款方.".format(en_type=AppFinance["实体类型"][1]))
+            if acObj.o_ac_type != 1:
+                raise Exception("请选择{en_type}的{ac_type}账户作为收款账户.".format(
+                    en_type=AppFinance["实体类型"][1],
+                    ac_type=AppFinance.c_data["记账类型"][acObj.o_ac_type])
+                )
+            # 生成账单
+            rtn = self._generateBill(conn, busi_type, orig_amt, real_amt, busi_summary="{en_type1}应付{en_type2}佣金".format(en_type1=AppFinance["实体类型"][3], en_type2=AppFinance["实体类型"][1]), acObj=acObj, busi_bill=busi_bill, third_bill=third_bill, acDate=acDate)
+            if not rtn["result"]:
+                raise Exception("新增业务失败：" + rtn["info"])
+            iBill = rtn["dataNumber"]
+
+            ## 商家支付平台佣金
+            if self.o_ac_type in (1, 3):
+                # 获取付款方式
+                sSql = r"select id from ac_pay_type where pay_mode=1 and actual_flag=1"
+                cur.execute(sSql)
+                rsPayType = cur.fetchall()
+                if len(rsPayType) == 0:
+                    raise Exception("新增业务失败：获取现金支付方式失败.")
+                rtn = self._generatePay(conn, busi_type, [{"pay_type": rsPayType[0][0], "pay_amt": real_amt}], ac_bill=iBill, acDate=acDate)
+                if not rtn["result"]:
+                    raise Exception("新增业务失败：" + rtn["info"])
+
+            conn.commit()
+            rtnData["result"] = True
+            rtnData["info"] = "新增业务账款生成成功."
+        except Exception as e:
+            if bConn:
+                conn.rollback()
+            rtnData["info"] = str(e)
+        finally:
+            if bConn:
+                conn.close()
+
+        return rtnData
+
+    def busi_adjust(self, ac_bill, orig_amt, real_amt, adj_remark, third_bill=None, acDate=datetime.now()):
+        """
+        业务账款调整
+        """
+        rtnData = {
+            "result": False,        # 逻辑控制 True/False
+            "dataString": "",       # 字符串
+            "dataNumber": 0,        # 数字
+            "datetime": None,       # 日期时间
+            "info": "",             # 信息
+            "entities": {}
+        }
+
+        bConn = False
+        try:
+            # 数据初始化
+            if not self.bInit:
+                rtn = self.dataRefresh()
+                if not rtn["result"]:
+                    raise Exception("查询账户数据失败：" + rtn["info"])
+
+            # 数据库连接
+            conn = self.dbFinance.GetConnect()
+            bConn = True
+            cur = conn.cursor()
+
+            ## 商家应付平台佣金调整金额
+            lCol = ["out_ac", "out_simple", "in_ac", "in_simple", "ac_type", "busi_type", "busi_bill", "third_bill", "orig_amt", "real_amt", "ac_date", "busi_summary"]
+            sCols = ""
+            for item in lCol:
+                sCols += ", " + item
+            sCols = sCols[2:len(sCols)]
+            sSql = r"select {sCols} from ac_bill_flow where id={ac_bill}".format(sCols=sCols, ac_bill=ac_bill)
+            rsBill = cur.fetchall()
+            if len(rsBill) == 0:
+                raise Exception("账单ID[{ac_bill}]无效.".format(ac_bill=ac_bill))
+            rdBill = dict(zip(lCol, rsBill[0]))
+            if rdBill["out_ac"] != self.o_id:
+                raise Exception("账单[{ac_bill}]不属于{en_type}{en_name}.".format(
+                    ac_bill=ac_bill, 
+                    en_type=AppFinance.c_data["实体类型"][self.o_entity_type]),
+                    en_name=self.o_simple_name
+                )
+            acObj = AppFinance(self.c_sett, 1, {"type": 1, "acID": rdBill["in_ac"]})
+            rtn = self._generateBill(conn, rdBill["busi_type"], orig_amt, real_amt, rdBill["busi_summary"] + "，" + adj_remark, acObj, rdBill["busi_bill"], (third_bill if third_bill else rdBill["third_bill"]), acDate)
+            if not rtn["result"]:
+                raise Exception("生成调整账单失败：" + rtn["info"])
+
+            ## 商家支付平台佣金调整金额
+            if self.o_ac_type in (1, 3):
+                # 获取付款方式
+                sSql = r"select id from ac_pay_type where pay_mode=1 and actual_flag=1"
+                cur.execute(sSql)
+                rsPayType = cur.fetchall()
+                if len(rsPayType) == 0:
+                    raise Exception("业务账款调整失败：获取现金支付方式失败.")
+                rtn = self._generatePay(conn, busi_type, [{"pay_type": rsPayType[0][0], "pay_amt": real_amt}], ac_bill=iBill, acDate=acDate)
+                if not rtn["result"]:
+                    raise Exception("业务账款调整失败：" + rtn["info"])
+
+            conn.commit()
+            rtnData["result"] = True
+        except Exception as e:
+            if bConn:
+                conn.rollback()
+            rtnData["info"] = str(e)
+        finally:
+            if bConn:
+                conn.close()
+
+        return rtnData
+
+    def busi_remove(self, ac_bill, remark, acDate=datetime.now()):
+        """
+        解除账单
+        """
+        rtnData = {
+            "result": False,        # 逻辑控制 True/False
+            "dataString": "",       # 字符串
+            "dataNumber": 0,        # 数字
+            "datetime": None,       # 日期时间
+            "info": "",             # 信息
+            "entities": {}
+        }
+
+        bConn = False
+        try:
+            # 数据初始化
+            if not self.bInit:
+                rtn = self.dataRefresh()
+                if not rtn["result"]:
+                    raise Exception("查询账户数据失败：" + rtn["info"])
+
+            # 数据库连接
+            conn = self.dbFinance.GetConnect()
+            bConn = True
+            cur = conn.cursor()
+
+            # 商家应付平台佣金冲红
+            # 商家支付平台佣金冲红
+
+            conn.commit()
+            rtnData["result"] = True
+        except Exception as e:
+            if bConn:
+                conn.rollback()
+            rtnData["info"] = str(e)
+        finally:
+            if bConn:
+                conn.close()
+
+        return rtnData
+
+    def busi_complete(self, orig_amt, real_amt, acObj, busi_bill, third_bill=None, acDate=datetime.now()):
+        """
+        验收完成
+        """
+        rtnData = {
+            "result": False,        # 逻辑控制 True/False
+            "dataString": "",       # 字符串
+            "dataNumber": 0,        # 数字
+            "datetime": None,       # 日期时间
+            "info": "",             # 信息
+            "entities": {}
+        }
+
+        bConn = False
+        try:
+            # 数据初始化
+            if not self.bInit:
+                rtn = self.dataRefresh()
+                if not rtn["result"]:
+                    raise Exception("查询账户数据失败：" + rtn["info"])
+
+            # 数据库连接
+            conn = self.dbFinance.GetConnect()
+            bConn = True
+            cur = conn.cursor()
+
+            # 平台应付服务商佣金
+            # 平台支付服务商佣金
+            # 服务商应付平台佣金
+            # 服务商支付平台佣金
+            # 服务商应付师傅佣金
+            # 服务商支付师傅佣金
+
+            conn.commit()
+            rtnData["result"] = True
+        except Exception as e:
+            if bConn:
+                conn.rollback()
+            rtnData["info"] = str(e)
+        finally:
+            if bConn:
+                conn.close()
+
+        return rtnData
+
+    def _generateBill(self, conn, busi_type, orig_amt, real_amt, busi_summary, acObj=None, busi_bill=None, third_bill=None, acDate=datetime.now()):
         """
         生成账单
         conn                数据库连接
-        ac_type             记账类型 1:收付 2:预收 3:预付 4:信用
         busi_type           业务类型 4:安装 5:维修
         orig_amt            原始交易金额
         real_amt            实际交易金额
@@ -889,8 +1124,6 @@ class AppFinance():
 
         try:
             # 参数有效性判断
-            if not AppFinance.c_data["记账类型"].get(ac_type):
-                raise Exception("不支持的记账类型[{ac_type}].".format(ac_type=ac_type))
             if not AppFinance.c_data["业务类型"].get(busi_type):
                 raise Exception("不支持的业务类型[{busi_type}].".format(busi_type=busi_type))
             if busi_type in (1,2,3):
@@ -924,7 +1157,7 @@ class AppFinance():
                     out_simple=self.o_simple_name,
                     in_ac=acObj.o_id,
                     in_simple=acObj.o_simple_name,
-                    ac_type=ac_type,
+                    ac_type=self.o_ac_type,
                     busi_type=busi_type,
                     orig_amt=orig_amt,
                     real_amt=real_amt,
