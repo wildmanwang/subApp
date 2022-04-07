@@ -27,7 +27,9 @@ class AppFinance():
             "acID": ###,    账户ID
             "enType": #,    实体类型 1:平台 2:服务商 3:商家 4:师傅
             "enID": ###,    实体ID
-            "acType": #     记账类型 1:收款 2:预收 3:信用
+            "acType": #,     记账类型 1:收付 2:预付 3:信用
+            "other_en_type": #, 对方实体类型
+            "other_en_id"： #   对方实体ID
         }
         """
         AppFinance.c_sett = sett
@@ -96,7 +98,9 @@ class AppFinance():
             "acID": ###,    账户ID
             "enType": #,    实体类型 1:平台 2:服务商 3:商家 4:师傅
             "enID": ###,    实体ID
-            "acType": #     记账类型 1:收付 2:预收 3:预付 4:信用
+            "acType": #,     记账类型 1:收付 2:预付 3:信用
+            "other_en_type": #, 对方实体类型
+            "other_en_id"： #   对方实体ID
         }
         """
         rtnData = {
@@ -131,11 +135,9 @@ class AppFinance():
             elif self.acPara["type"] == 2:
                 if AppFinance.c_data["实体类型"].get(self.acPara["enType"]):
                     if self.acPara["enID"] >= 0:
-                        sSql += r"entity_type={entity_type} and entity_id={entity_id} and other_en_type={other_en_type} and other_en_id={other_en_id}".format(
+                        sSql += r"entity_type={entity_type} and entity_id={entity_id}".format(
                             entity_type=self.acPara["enType"], 
-                            entity_id=self.acPara["enID"],
-                            other_en_type=self.acPara["other_en_type"],
-                            other_en_id=self.acPara["other_en_id"]
+                            entity_id=self.acPara["enID"]
                         )
                     else:
                         raise Exception("指定传入实体ID，传值无效.")
@@ -145,6 +147,15 @@ class AppFinance():
                     sSql += r" and ac_type = " + str(self.acPara["acType"])
                 else:
                     raise Exception("记账类型无效.")
+                if self.acPara.get("acType") > 1:
+                    if not self.acPara.get("other_en_type"):
+                        raise Exception("请传入{ac_type}账号对方实体类型.".format(ac_type=AppFinance.c_data["记账类型"][self.acPara.get("ac_type")]))
+                    if not self.acPara.get("other_en_id"):
+                        raise Exception("请传入{ac_type}账号对方实体ID.".format(ac_type=AppFinance.c_data["记账类型"][self.acPara.get("ac_type")]))
+                    sSql += r" and other_en_type={other_en_type} and other_en_id={other_en_id}".format(
+                        other_en_type=self.acPara.get("other_en_type"),
+                        other_en_id=self.acPara.get("other_en_id")
+                    )
             else:
                 raise Exception("传入参数类型只能选择[账号ID,实体ID].")
             cur.execute(sSql)
@@ -216,7 +227,7 @@ class AppFinance():
             "simple_name": "XXX",   账户简称
             "entity_type": #,       实体类型 1:平台 2:服务商 3:商家 4:师傅
             "entity_id": #,         实体ID
-            "ac_type": #,           记账类型 1:收付 2:预收 3:预付 4:信用
+            "ac_type": #,           记账类型 1:收付 2:预付 3:信用
             "other_en_type": #,     预付实体类型
             "other_en_id": #,       预付实体ID
             "credit_line": 0.00,    授信额度
@@ -267,12 +278,9 @@ class AppFinance():
                     raise Exception("[{name}]或[{simple_name}]名称已被占用，不可使用".format(name=data["name"], simple_name=data["simple_name"]))
 
             # 账户类型限制
-            if data["entity_type"] == 1 and data["ac_type"] == 4 or \
-                data["entity_type"] == 2 and data["ac_type"] == 3 or \
-                data["entity_type"] == 3 and data["ac_type"] == 2 or \
+            if data["entity_type"] == 2 and data["ac_type"] == 2 or \
                 data["entity_type"] == 4 and data["ac_type"] == 2 or \
-                data["entity_type"] == 4 and data["ac_type"] == 3 or \
-                data["entity_type"] == 4 and data["ac_type"] == 4 :
+                data["entity_type"] == 4 and data["ac_type"] == 3 :
                 raise Exception(AppFinance.c_data["实体类型"][data["entity_type"]] + "不可创建" + AppFinance.c_data["记账类型"][data["ac_type"]] + "账户.")
 
             lCol = ["name", "simple_name", "entity_type", "entity_id", "ac_type", "other_en_type", "other_en_id", "ac_balance", "credit_line", "check_flag", "check_balance"]
@@ -360,11 +368,8 @@ class AppFinance():
         bConn = False
         try:
             # 业务类型判断
-            if self.o_ac_type in (1, 4):
+            if self.o_ac_type != 2:
                 raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可充值.")
-
-            # 金额判断
-            pass
 
             # 数据库连接
             conn = self.dbFinance.GetConnect()
@@ -412,7 +417,7 @@ class AppFinance():
         bConn = False
         try:
             # 业务类型判断
-            if self.o_ac_type in (1, 2, 3):
+            if self.o_ac_type != 3:
                 raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可还款.")
 
             # 金额判断
@@ -464,7 +469,7 @@ class AppFinance():
         bConn = False
         try:
             # 业务类型判断
-            if self.o_ac_type in (1, 4):
+            if self.o_ac_type != 2:
                 raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可充值提现.")
 
             # 提现金额判断
@@ -518,7 +523,7 @@ class AppFinance():
         bConn = False
         try:
             # 业务类型判断
-            if self.o_ac_type in (2, 3, 4):
+            if self.o_ac_type != 1:
                 raise Exception(AppFinance.c_data["记账类型"][self.o_ac_type] + "账户不可收款提现.")
 
             # 提现金额判断
@@ -644,25 +649,6 @@ class AppFinance():
             sSql += ", bill_remark=if(bill_remark is null, '已被冲红', concat(bill_remark,'；已被冲红'))"
             sSql += r" where id={id}".format(id=ac_bill)
             cur.execute(sSql)
-
-            # 授信额度更新
-            if self.o_ac_type == 4:
-                sSql = r"update ac_account set ac_balance = ac_balance + {amt} where id={id}".format(
-                    id=self.o_id,
-                    amt=lData["real_amt"]
-                )
-                num = cur.execute(sSql)
-                if num != 1:
-                    raise Exception("账户{name}数据异常.".format(name=self.o_name))
-            acObj = AppFinance(AppFinance.c_sett, 1, {"type":1, "acID":lData["in_ac"]})
-            if acObj.o_ac_type == 4:
-                sSql = r"update ac_account set ac_balance = ac_balance - {amt} where id={id} and".format(
-                    id=acObj.o_id,
-                    amt=lData["real_amt"]
-                )
-                num = cur.execute(sSql)
-                if num != 1:
-                    raise Exception("账户{name}数据异常.".format(name=acObj.o_name))
 
             # 提交事务
             conn.commit()
@@ -921,11 +907,9 @@ class AppFinance():
             cur = conn.cursor()
 
             # 账号有效性判断
-            if self.o_ac_type in (2, 3):
-                raise Exception("{ac_type}账户不支持生成账单.".format(ac_type=AppFinance.c_data["记账类型"][self.o_ac_type]))
             # 对方账号有效性判断
-            if acObj.o_ac_type in (2, 3):
-                raise Exception("{ac_type}账户不支持生成账单.".format(ac_type=AppFinance.c_data["记账类型"][acObj.o_ac_type]))
+            if acObj.o_ac_type > 1:
+                raise Exception("{ac_type}账户不支持收款.".format(ac_type=AppFinance.c_data["记账类型"][acObj.o_ac_type]))
             
             # 生成账单
             sSummary = "{en_type1}应付{en_type2}佣金".format(
@@ -1018,17 +1002,15 @@ class AppFinance():
                 raise Exception("生成调整账单失败：" + rtn["info"])
             iBill = rtn["dataNumber"]
 
-            # 商家支付平台佣金调整金额
-            if self.o_ac_type in (1, 4):
-                # 获取付款方式
-                sSql = r"select id from ac_pay_type where pay_mode=1 and actual_flag=1"
-                cur.execute(sSql)
-                rsPayType = cur.fetchall()
-                if len(rsPayType) == 0:
-                    raise Exception("业务账款调整失败：获取现金支付方式失败.")
-                rtn = self._generatePay(conn, rdBill["busi_type"], [{"pay_type": rsPayType[0][0], "pay_amt": real_amt}], ac_bill=iBill, acDate=acDate)
-                if not rtn["result"]:
-                    raise Exception("业务账款调整失败：" + rtn["info"])
+            # 获取付款方式
+            sSql = r"select id from ac_pay_type where pay_mode=1 and actual_flag=1"
+            cur.execute(sSql)
+            rsPayType = cur.fetchall()
+            if len(rsPayType) == 0:
+                raise Exception("业务账款调整失败：获取现金支付方式失败.")
+            rtn = self._generatePay(conn, rdBill["busi_type"], [{"pay_type": rsPayType[0][0], "pay_amt": real_amt}], ac_bill=iBill, acDate=acDate)
+            if not rtn["result"]:
+                raise Exception("业务账款调整失败：" + rtn["info"])
 
             conn.commit()
             rtnData["result"] = True
@@ -1169,14 +1151,16 @@ class AppFinance():
             cur = conn.cursor()
 
             # 记录账单明细
-            sSql = r"insert into ac_bill_flow ( out_ac, out_simple, in_ac, in_simple, ac_type, busi_type, orig_amt, real_amt, ac_date, busi_summary ) " + \
-                r"values ({out_ac}, '{out_simple}', {in_ac}, '{in_simple}', {ac_type}, {busi_type}, {orig_amt}, {real_amt}, '{ac_date}', '{busi_summary}' ) ".format(
+            sSql = r"insert into ac_bill_flow ( out_ac, out_simple, in_ac, in_simple, ac_type, busi_type, busi_bill, third_bill, orig_amt, real_amt, ac_date, busi_summary ) " + \
+                r"values ({out_ac}, '{out_simple}', {in_ac}, '{in_simple}', {ac_type}, {busi_type}, '{busi_bill}', '{third_bill}', {orig_amt}, {real_amt}, '{ac_date}', '{busi_summary}' ) ".format(
                     out_ac=self.o_id,
                     out_simple=self.o_simple_name,
                     in_ac=acObj.o_id,
                     in_simple=acObj.o_simple_name,
                     ac_type=self.o_ac_type,
                     busi_type=busi_type,
+                    busi_bill=busi_bill if busi_bill else '',
+                    third_bill=third_bill if third_bill else '',
                     orig_amt=orig_amt,
                     real_amt=real_amt,
                     ac_date=datetime.strftime(acDate, '%Y-%m-%d'),
@@ -1294,20 +1278,21 @@ class AppFinance():
                     # 收付账户，不检查余额
                     pass
                 elif self.o_ac_type == 2:
-                    # 预收账户，检查余额
+                    # 预付账户，检查余额
                     if paySum > self.o_ac_balance:
                         raise Exception("余额不足.")
                 elif self.o_ac_type == 3:
-                    # 预付账户，检查余额
-                    raise Exception("余额不足.")
-                elif self.o_ac_type == 4:
                     # 信用账户，检查授信额度
-                    if self.o_ac_balance * -1 > self.o_credit_line:
+                    if (self.o_ac_balance - paySum) * -1 > self.o_credit_line:
                         raise Exception("授信额度不足.")
                 
                 # 收款账号信息
                 if lData["in_ac"]:
                     acObj = AppFinance(AppFinance.c_sett, 1, {"type": 1, "acID": lData["in_ac"]})
+                    if acObj.o_ac_type > 1:
+                        raise Exception("{ac_type}账户不可用于收款.".format(ac_type=AppFinance.c_data["记账类型"][acObj.o_ac_type]))
+                else:
+                    raise Exception("请指定收款账户.")
             else:
                 bBillFlag = False
 
@@ -1414,75 +1399,3 @@ if __name__ == "__main__":
 
     myPath = os.path.abspath(os.path.dirname(__file__))
     mySett = Settings(myPath, "config")
-
-    # 创建账户
-    # myAcc = AppFinance(mySett, 0)
-    # rtn = myAcc.fCreateAc({"name": "CSP客户服务平台", "simple_name": "CSP", "entity_type": 1, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
-    # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "巧匠上门服务有限公司", "simple_name": "巧匠上门", "entity_type": 2, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
-    # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "鲁班到家家居售后服务平台", "simple_name": "鲁班到家", "entity_type": 2, "entity_id": 2, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
-    # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "鲁班到家家居售后服务平台", "simple_name": "鲁班到家", "entity_type": 2, "entity_id": 2, "ac_type": 2, "credit_line": 0.00, "check_flag": 0})
-    # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "万师傅家居服务平台", "simple_name": "万师傅", "entity_type": 2, "entity_id": 3, "ac_type": 4, "credit_line": 10000.00, "check_flag": 0})
-    # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "石将军家居服务有限公司", "simple_name": "石将军", "entity_type": 3, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
-    # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "华南万达家居服务有限公司", "simple_name": "华南万达", "entity_type": 3, "entity_id": 2, "ac_type": 3, "credit_line": 0.00, "check_flag": 0})
-    # print(rtn["info"]) 
-    # rtn = myAcc.fCreateAc({"name": "张大前", "simple_name": "张师傅", "entity_type": 4, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
-    # print(rtn["info"]) 
-
-    # 鲁班到家充值2000
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 2})
-    # rtn = myAcc.fAcPutin(4, 2000)
-    # print(rtn["info"])
-
-    # 鲁班到家充值提现200
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 2})
-    # rtn = myAcc.fAcGetback(4, 200)
-    # print(rtn["info"])
-
-    # 万师傅还款300
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 3, "acType": 4})
-    # rtn = myAcc.fAcPayback(2, 300)
-    # print(rtn["info"])
-
-    # 华南万达充值1200
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 2, "acType": 3})
-    # rtn = myAcc.fAcPutin(3, 1200)
-    # print(rtn["info"])
-
-    # 华南万达充值提现300
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 2, "acType": 3})
-    # rtn = myAcc.fAcGetback(2, 300)
-    # print(rtn["info"])
-
-    # 鲁班到家充值500
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 2})
-    # rtn = myAcc.fAcPutin(3, 500)
-    # print(rtn["info"])
-
-    # 鲁班到家充值500冲红
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 2})
-    # rtn = myAcc.fFrushPay(6, "充多了退回来")
-    # print(rtn["info"])
-
-    # 石将军实付CSP佣金80
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 1, "acType": 1})
-    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 1})
-    # rtn = myAcc.fBusiNew(80, 80, acOther, 4, 'a0001')
-    # print(rtn["info"])
-
-    # 石将军调整CSP佣金30
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 1, "acType": 1})
-    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 1})
-    # rtn = myAcc.fBusiAdjust(5, 30, 30, "空跑费")
-    # print(rtn["info"])
-
-    # CSP实付巧匠上门佣金100 --------------------------
-    myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 1})
-    acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 1, "acType": 1})
-    rtn = myAcc.fBusiNew(100, 100, acOther, 4, 'a0002')
-    print(rtn["info"])
