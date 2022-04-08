@@ -28,6 +28,9 @@ class Settings():
 
         # 业务参数
         self.tmpFilePath = self.config.get("business", "tmpFilePath")
+        self.payType1 = self.config.getint("business", "payType1")
+        self.payType2 = self.config.getint("business", "payType2")
+        self.payType3 = self.config.getint("business", "payType3")
 
         # 状态
         self.run = True

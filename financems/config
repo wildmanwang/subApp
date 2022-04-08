@@ -7,3 +7,6 @@ database = financems
 
 [business]
 tmpfilepath = d:\
+payType1=4
+payType2=4
+payType3=4
