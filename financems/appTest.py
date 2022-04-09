@@ -50,12 +50,14 @@ if __name__ == "__main__":
     # 鲁班到家充值500
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
     # rtn = myAcc.fAcPutin(3, 500)
+    # iFlow = rtn["entities"]
     # print(rtn["info"])
 
     # 鲁班到家充值500冲红
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
-    # rtn = myAcc.fFrushPay(5, "充多了退回来")
-    # print(rtn["info"])
+    # for line in iFlow:
+    #     rtn = myAcc.fFrushPay(line, "充多了退回来")
+    #     print(rtn["info"])
 
     # 石将军实付CSP佣金80
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 1, "acType": 1})
@@ -150,3 +152,9 @@ if __name__ == "__main__":
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 4, "enID": 1, "acType": 1})
     # rtn = myAcc.fAcGetout(1, 50)
     # print(rtn["info"])
+
+    # CSP多方式支付鲁班：扣款90+票券20
+    myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
+    rtn = myAcc.fBusiNew(110, 110, acOther, 4, 'a0006', paylist=[{"pay_type": 5, "pay_amt": 20}])
+    print(rtn["info"])

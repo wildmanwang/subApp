@@ -65,6 +65,8 @@ create table ac_pay_flow(
     pay_time        datetime not null                   comment '支付时间',
     ac_date         datetime not null                   comment '财务日期',
     busi_summary    varchar(255) not null               comment '业务摘要',
+    pay_code        varchar(50)                         comment '支付码，例如：票券号、银行卡号等',
+    third_bill      varchar(50)                         comment '第三方单据号',
     frush_flag      tinyint default 0                   comment '冲红标志 0:非冲红 1:冲红 2:被冲红',
     frush_bill      int                                 comment '冲红原单',
     frush_remark    varchar(255)                        comment '冲红备注',
@@ -83,16 +85,19 @@ create table ac_pay_type(
     name            varchar(50) not null unique         comment '名称',
     pay_mode        tinyint not null                    comment '支付模式 1:现金 2:第三方 3:银行卡 4:票券 9:其他',
     actual_flag     tinyint not null                    comment '实付标志 0:虚收 1:实收',
+    change_flag     tinyint not null                    comment '找零标志 0:不找零 1:找零',
     fee_rate        decimal(10,8) not null default 0.00 comment '费率',
     status          tinyint not null                    comment '状态 0:未生效 1:正常',
     remark          varchar(50)                         comment '备注',
     created_time    timestamp null default current_timestamp,
     updated_time    timestamp null on update current_timestamp
 ) comment = '付款方式';
-insert into ac_pay_type ( name, pay_mode, actual_flag, status ) value ( '现金', 1, 1, 1 );
-insert into ac_pay_type ( name, pay_mode, actual_flag, status ) value ( '微信', 2, 1, 1 );
-insert into ac_pay_type ( name, pay_mode, actual_flag, status ) value ( '支付宝', 2, 1, 1 );
-insert into ac_pay_type ( name, pay_mode, actual_flag, status ) value ( '银行卡', 3, 1, 1 );
+insert into ac_pay_type ( name, pay_mode, actual_flag, change_flag, status ) value ( '现金', 1, 1, 1, 1 );
+insert into ac_pay_type ( name, pay_mode, actual_flag, change_flag, status ) value ( '微信', 2, 1, 1, 1 );
+insert into ac_pay_type ( name, pay_mode, actual_flag, change_flag, status ) value ( '支付宝', 2, 1, 1, 1 );
+insert into ac_pay_type ( name, pay_mode, actual_flag, change_flag, status ) value ( '银行卡', 3, 1, 1, 1 );
+insert into ac_pay_type ( name, pay_mode, actual_flag, change_flag, status ) value ( '票券', 4, 0, 0, 1 );
+insert into ac_pay_type ( name, pay_mode, actual_flag, change_flag, status ) value ( '损单', 9, 0, 0, 1 );
 
 -- 数据字典
 create table base_dict(
