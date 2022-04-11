@@ -27,12 +27,12 @@ if __name__ == "__main__":
     # rtn = myAcc.fCreateAc({"name": "张大前", "simple_name": "张师傅", "entity_type": 4, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
     # print(rtn["info"]) 
 
-    # 鲁班到家充值2000
+    # CSP向鲁班到家充值2000
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
     # rtn = myAcc.fAcPutin(4, 2000)
     # print(rtn["info"])
 
-    # 鲁班到家充值提现200
+    # CSP从鲁班到家充值提现200
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
     # rtn = myAcc.fAcGetback(4, 200)
     # print(rtn["info"])
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     # rtn = myAcc.fAcPayback(2, 300)
     # print(rtn["info"])
 
-    # 华南万达充值1200
+    # 华南万达还款1200
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 2, "acType": 3, "other_en_type": 1, "other_en_id": 1})
     # rtn = myAcc.fAcPayback(3, 1200)
     # print(rtn["info"])
@@ -154,7 +154,29 @@ if __name__ == "__main__":
     # print(rtn["info"])
 
     # CSP多方式支付鲁班：扣款90+票券20
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
+    # rtn = myAcc.fBusiNew(110, 100, acOther, 4, 'a0006', paylist=[{"pay_type": 5, "pay_amt": 30}])
+    # print(rtn["info"])
+
+    # CSP多方式支付鲁班：支付宝70
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
+    # rtn = myAcc.fBusiNew(70, 70, acOther, 4, 'a0006', paylist=[{"pay_type": 3, "pay_amt": 70}])
+    # print(rtn["info"])
+
+    # CSP多方式支付鲁班：支付宝80
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
+    # rtn = myAcc.fBusiNew(80, 80, acOther, 4, 'a0006', paylist=[{"pay_type": 3, "pay_amt": 100}])
+    # print(rtn["info"])
+
+    # CSP多方式支付鲁班：支付宝30
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
+    # rtn = myAcc.fBusiNew(80, 80, acOther, 4, 'a0006', paylist=[{"pay_type": 4, "pay_amt": 50}, {"pay_type": 3, "pay_amt": 60}])
+    # print(rtn["info"])
+
     myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
-    acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
-    rtn = myAcc.fBusiNew(110, 110, acOther, 4, 'a0006', paylist=[{"pay_type": 5, "pay_amt": 20}])
+    rtn = myAcc.fFrushBill(36, '测试账单冲红')
     print(rtn["info"])
