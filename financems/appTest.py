@@ -26,6 +26,8 @@ if __name__ == "__main__":
     # print(rtn["info"]) 
     # rtn = myAcc.fCreateAc({"name": "张大前", "simple_name": "张师傅", "entity_type": 4, "entity_id": 1, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
     # print(rtn["info"]) 
+    # rtn = myAcc.fCreateAc({"name": "周强", "simple_name": "周师傅", "entity_type": 4, "entity_id": 2, "ac_type": 1, "credit_line": 0.00, "check_flag": 0})
+    # print(rtn["info"]) 
 
     # CSP向鲁班到家充值2000
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
@@ -175,8 +177,40 @@ if __name__ == "__main__":
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
     # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
     # rtn = myAcc.fBusiNew(80, 80, acOther, 4, 'a0006', paylist=[{"pay_type": 4, "pay_amt": 50}, {"pay_type": 3, "pay_amt": 60}])
+    # iFlow = rtn["entities"]["bill"]
+    # print(rtn["info"])
+    # 支付账单冲红
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    # for line in iFlow:
+    #    rtn = myAcc.fFrushBill(line, '测试账单冲红')
+    #    print(rtn["info"])
+
+    # CSP信用支付万师傅：票券20
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 3, "other_en_type": 2, "other_en_id": 3})
+    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 3, "acType": 1})
+    # rtn = myAcc.fBusiNew(100, 90, acOther, 4, 'a0007', paylist=[{"pay_type": 5, "pay_amt": 20}])
+    # iFlow = rtn["entities"]["bill"]
+    # print(rtn["info"])
+    # 支付账单冲红
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 3, "other_en_type": 2, "other_en_id": 3})
+    # for line in iFlow:
+    #     rtn = myAcc.fFrushBill(line, '测试账单冲红')
+    #     print(rtn["info"])
+
+    # CSP扣款鲁班：余额不足
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
+    # rtn = myAcc.fBusiNew(1100, 1100, acOther, 4, 'a0006')
     # print(rtn["info"])
 
-    myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
-    rtn = myAcc.fFrushBill(36, '测试账单冲红')
+    # CSP信用支付万师傅：信用不足
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 3, "other_en_type": 2, "other_en_id": 3})
+    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 3, "acType": 1})
+    # rtn = myAcc.fBusiNew(10000, 10000, acOther, 4, 'a0007')
+    # print(rtn["info"])
+
+    # 巧匠上门实付张师傅佣金60
+    myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 4, "enID": 1, "acType": 1})
+    acOther = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 3, "other_en_type": 2, "other_en_id": 3})
+    rtn = myAcc.fBusiNew(60, 60, acOther, 4, 'a0002')
     print(rtn["info"])
