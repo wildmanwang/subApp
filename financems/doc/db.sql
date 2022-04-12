@@ -28,7 +28,7 @@ create table ac_bill_flow(
     in_ac           int                                 comment '应收账户',
     in_simple       varchar(20)                         comment '应收账户简称',
     ac_type         tinyint not null                    comment '记账类型 1:收付 2:预付 3:信用',
-    busi_type       tinyint not null                    comment '业务类型 1:充值 2:提现 3:还款 4:安装 5:售后',
+    busi_type       tinyint not null                    comment '业务类型 4:安装 5:售后',
     busi_bill       varchar(50)                         comment '业务单据号',
     third_bill      varchar(50)                         comment '第三方单据号',
     orig_amt        decimal(12,2) not null              comment '原始交易金额',

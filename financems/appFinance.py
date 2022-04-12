@@ -1225,87 +1225,6 @@ class AppFinance():
 
         return rtnData
 
-    def fBusiRemove(self, acBill, remark, acDate=None):
-        """
-        解除账单
-        """
-        rtnData = {
-            "result": False,        # 逻辑控制 True/False
-            "dataString": "",       # 字符串
-            "dataNumber": 0,        # 数字
-            "datetime": None,       # 日期时间
-            "info": "",             # 信息
-            "entities": {}
-        }
-
-        bConn = False
-        try:
-            # 参数有效性判断
-            if not acDate:
-                acDate = datetime.now()
-            
-            # 数据初始化
-            if not self.bInit:
-                rtn = self.dataRefresh()
-                if not rtn["result"]:
-                    raise Exception("查询账户数据失败：" + rtn["info"])
-
-            # 数据库连接
-            conn = self.dbFinance.GetConnect()
-            bConn = True
-            cur = conn.cursor()
-
-            # 获取原账单信息
-            lCol = ["out_ac", "out_simple", "in_ac", "in_simple", "ac_type", "busi_type", "busi_bill", "third_bill", "orig_amt", "real_amt", "ac_date", "busi_summary", "frush_flag", "pay_flag", "close_flag"]
-            sCols = ""
-            for item in lCol:
-                sCols += ", " + item
-            sCols = sCols[2:len(sCols)]
-            sSql = r"select {sCols} from ac_bill_flow where id={acBill}".format(sCols=sCols, acBill=acBill)
-            cur.execute(sSql)
-            rsBill = cur.fetchall()
-            if len(rsBill) == 0:
-                raise Exception("账单ID[{acBill}]无效.".format(acBill=acBill))
-            rdBill = dict(zip(lCol, rsBill[0]))
-            if rdBill["out_ac"] != self.o_id:
-                raise Exception("账单[{acBill}]不属于{en_type}{en_name}.".format(
-                    acBill=acBill, 
-                    en_type=AppFinance.c_data["实体类型"][self.o_entity_type]),
-                    en_name=self.o_simple_name
-                )
-            if rdBill["frush_flag"] == 1:
-                raise Exception("账单[{acBill}]是冲红单，不可冲红.".format(acBill=acBill))
-            elif rdBill["frush_flag"] == 2:
-                raise Exception("账单[{acBill}]已被冲红，不可冲红.".format(acBill=acBill))
-            
-            # 商家支付平台佣金冲红
-            sSql = r"select id from ac_pay_flow where bill_flow={acBill}".format(acBill=acBill)
-            cur.execute(sSql)
-            rsPay = cur.fetchall()
-            for line in rsPay:
-                rtn = self.fFrushPay(line[0], frush_remark)
-                if not rtn["result"]:
-                    raise Exception(rtn["info"])
-            
-            # 商家应付平台佣金冲红
-            rtn = self.fFrushBill(acBill, remark, acDate=acDate)
-            if not rtn["result"]:
-                raise Exception(rtn["info"])
-
-            conn.commit()
-            rtnData["result"] = True
-            rtnData["entities"] = rtn["entities"]
-            rtnData["info"] = "解除账单成功."
-        except Exception as e:
-            if bConn:
-                conn.rollback()
-            rtnData["info"] = str(e)
-        finally:
-            if bConn:
-                conn.close()
-
-        return rtnData
-
     def fCreditAutoPay(self):
         """
         信用账户自动完成账单付款
@@ -1419,7 +1338,7 @@ class AppFinance():
                 raise Exception("不支持的业务类型[{busi_type}].".format(busi_type=busi_type))
             if busi_type in (1,2,3):
                 raise Exception("账户类操作不需要生成账单.")
-            if real_amt <= 0 or not real_amt:
+            if not real_amt:
                 raise Exception("交易金额无效.")
             if real_amt > 999999.99:
                 raise Exception("充值金额太大：{amt}，请检查是否正确".format(amt=real_amt))
