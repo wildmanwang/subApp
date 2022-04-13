@@ -29,6 +29,7 @@ create table ac_bill_flow(
     in_simple       varchar(20)                         comment '应收账户简称',
     ac_type         tinyint not null                    comment '记账类型 1:收付 2:预付 3:信用',
     busi_type       tinyint not null                    comment '业务类型 4:安装 5:售后',
+    fee_type        int not null                        comment '费用类型 401:基础安装费 402:附加费 501:二次上门/空跑费 502:维修费 503:售后退费',
     busi_bill       varchar(50)                         comment '业务单据号',
     third_bill      varchar(50)                         comment '第三方单据号',
     orig_amt        decimal(12,2) not null              comment '原始交易金额',
@@ -59,6 +60,7 @@ create table ac_pay_flow(
     in_simple       varchar(20)                         comment '收款账户简称',
     in_balance      decimal(12,2)                       comment '收款后余额',
     busi_type       tinyint not null                    comment '业务类型 1:充值 2:提现 3:还款 4:安装 5:售后',
+    busi_bill       varchar(50)                         comment '业务单据号',
     bill_flow       int                                 comment '账单ID',
     pay_type        int not null                        comment '付款方式',
     orig_amt        decimal(12,2) not null              comment '原始金额',
@@ -125,6 +127,11 @@ insert into base_dict ( bd_type, bd_label, bd_value ) values ( '业务类型', '
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '业务类型', '还款', 3 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '业务类型', '安装', 4 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '业务类型', '售后', 5 );
+insert into base_dict ( bd_type, bd_label, bd_value ) values ( '费用类型', '基础安装费', 401 );
+insert into base_dict ( bd_type, bd_label, bd_value ) values ( '费用类型', '附加费', 402 );
+insert into base_dict ( bd_type, bd_label, bd_value ) values ( '费用类型', '维修费', 501 );
+insert into base_dict ( bd_type, bd_label, bd_value ) values ( '费用类型', '二次上门/空跑费', 502 );
+insert into base_dict ( bd_type, bd_label, bd_value ) values ( '费用类型', '售后退费', 503 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '支付模式', '现金', 1 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '支付模式', '第三方', 2 );
 insert into base_dict ( bd_type, bd_label, bd_value ) values ( '支付模式', '银行卡', 3 );
