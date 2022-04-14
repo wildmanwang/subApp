@@ -62,10 +62,14 @@ if __name__ == "__main__":
     #     print(rtn["info"])
 
     # 石将军实付CSP佣金80
-    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 1, "acType": 1})
-    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 1})
-    # rtn = myAcc.fBusiNew(80, 80, acOther, 4, 'a0001')
-    # print(rtn["info"])
+    myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 1, "acType": 1})
+    acOther = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 1})
+    busilist = [
+        {"busi_type": 4, "fee_type": 401, "busi_branch": 2, "busi_spu": 13, "orig_amt": 100, "real_amt": 90}, 
+        {"busi_type": 4, "fee_type": 402, "busi_branch": 2, "busi_spu": 13, "orig_amt": 30, "real_amt": 30}]
+    paylist = [{"pay_type": 5, "orig_amt": 30, "pay_amt": 20}]
+    rtn = myAcc.fBusiNew(acOther, 'b0001', 'y0001', busilist=busilist, paylist=paylist)
+    print(rtn["info"])
 
     # 石将军调整CSP佣金30
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 3, "enID": 1, "acType": 1})
@@ -142,7 +146,7 @@ if __name__ == "__main__":
     # CSP授信扣款万师傅佣金70
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 3, "other_en_type": 2, "other_en_id": 3})
     # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 3, "acType": 1})
-    # rtn = myAcc.fBusiNew(70, 70, acOther, 4, 'a0007')
+    # rtn = myAcc.fBusiNew(acOther, 'a0016', 'x0016', busilist=[{"busi_type": 4, "fee_type": 401, "busi_branch": 3, "busi_spu": 13, "orig_amt": 60, "real_amt": 60}])
     # print(rtn["info"])
 
     # 鲁班到家收款提现80
@@ -213,6 +217,18 @@ if __name__ == "__main__":
     # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
     # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
     # rtn = myAcc.fBusiNew(acOther, "a0014", "x0015", busilist=[{"busi_type": 4, "fee_type": 401, "orig_amt": 110, "real_amt": 80}, {"busi_type": 4, "fee_type": 402, "orig_amt": 30, "real_amt": 20}], paylist=[{"pay_type": 4, "pay_amt": 86}, {"pay_type": 5, "pay_amt": 50}])
+    # print(rtn["info"])
+    # rtn = myAcc.fBusiNew(acOther, "a0014", "x0015", busilist=[{"busi_type": 4, "fee_type": 401, "orig_amt": 20, "real_amt": 20}, {"busi_type": 4, "fee_type": 402, "orig_amt": 10, "real_amt": 10}], paylist=[{"pay_type": 5, "pay_amt": 10}])
+    # print(rtn["info"])
+    # 业务冲红：多账单、多支付
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    # rtn = myAcc.fBusiFrush("a0014", "综合业务冲红")
+    # print(rtn["info"])
+
+    # 鲁班售后退费
+    # myAcc = AppFinance(mySett, 1, {"type": 2, "enType": 1, "enID": 1, "acType": 2, "other_en_type": 2, "other_en_id": 2})
+    # acOther = AppFinance(mySett, 1, {"type": 2, "enType": 2, "enID": 2, "acType": 1})
+    # rtn = myAcc.fBusiNew(acOther, "a0014", "x0015", busilist=[{"busi_type": 5, "fee_type": 503, "orig_amt": -100, "real_amt": -80}])
     # print(rtn["info"])
     # rtn = myAcc.fBusiNew(acOther, "a0014", "x0015", busilist=[{"busi_type": 4, "fee_type": 401, "orig_amt": 20, "real_amt": 20}, {"busi_type": 4, "fee_type": 402, "orig_amt": 10, "real_amt": 10}], paylist=[{"pay_type": 5, "pay_amt": 10}])
     # print(rtn["info"])

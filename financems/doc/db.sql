@@ -30,6 +30,8 @@ create table ac_bill_flow(
     ac_type         tinyint not null                    comment '记账类型 1:收付 2:预付 3:信用',
     busi_type       tinyint not null                    comment '业务类型 4:安装 5:售后',
     fee_type        int not null                        comment '费用类型 401:基础安装费 402:附加费 501:二次上门/空跑费 502:维修费 503:售后退费',
+    busi_branch     int not null                        comment '业务门店',
+    busi_spu        int not null                        comment '业务SPU',
     busi_bill       varchar(50)                         comment '业务单据号',
     third_bill      varchar(50)                         comment '第三方单据号',
     orig_amt        decimal(12,2) not null              comment '原始交易金额',
@@ -82,6 +84,21 @@ create table ac_pay_flow(
     index idx_inac (in_ac),
     index idx_paytype (pay_type)
 ) comment = '支付明细';
+
+-- 月度账户汇总表
+create table ac_rpt_month_account(
+    id              int auto_increment primary key,
+    ac_id           int not null                        comment '账户ID',
+    month           int not null                        comment '月份',
+    begin_balance   decimal(12,2) not null              comment '期初余额',
+    ac_in           decimal(12,2) not null              comment '充值还款',
+    ac_out          decimal(12,2) not null              comment '提现',
+    busi_in         decimal(12,2) not null              comment '收入',
+    busi_out        decimal(12,2) not null              comment '支出',
+    end_balance     decimal(12,2) not null              comment '期末余额',
+    index idx_ac (ac_id),
+    index idx_month (month)
+) comment = '月度账户汇总表';
 
 -- 付款方式
 create table ac_pay_type(
